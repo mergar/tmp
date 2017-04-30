@@ -1,0 +1,5 @@
+allow booting;
+allow bootp;
+if exists user-class and option user-class = "iPXE" {
+    filename "http://192.168.0.2/install.ipxe";
+}

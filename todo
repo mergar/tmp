@@ -1,0 +1,22 @@
+1) test for workdir-inplac patch: if variable begins with / - than its full path
+of insert $workpath instead
+
+
+apply to:
+geli
+rc.conf
+and other
+
+2) Синхронизация src,base,kernel между добавленными нодами
+
+3) TOR anonymysing
+
+4) Создание baseworld из существующей системы ( /etc? )
+
+5) пофиксить sysrc с сервисами в профайлере
+
+6) Создание профилей для Bhyve (cpu/mem/disksize)
+
+
+
+bhyve: создание empty виртуалки с произвольным CD ISO (для своих .ISO)

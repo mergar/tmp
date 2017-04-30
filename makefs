@@ -1,0 +1,2 @@
+makefs -t cd9660 -o "bootimage=i386;/CBSDEFI/refind-bin-0.10.4.img" -o no-emul-boot /tmp/myefi.iso /CBSDEFI
+

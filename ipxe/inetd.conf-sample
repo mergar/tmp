@@ -1,0 +1,3 @@
+tftp   dgram   udp     wait    root    /usr/libexec/tftpd      tftpd -l -s /usr/local/cbsd/tmp/ipxe/tftpboot
+tftp   dgram   udp6    wait    root    /usr/libexec/tftpd      tftpd -l -s /usr/local/cbsd/tmp/ipxe/tftpboot
+

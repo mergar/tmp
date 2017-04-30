@@ -1,0 +1,20 @@
+uri ldap://<%= @ldapserver %>
+<% if @ou -%>
+base <%= @ou %>,<%= @database %>
+<% else -%>
+base <%= @database %>
+<% end -%>
+
+ldap_version 3
+
+timelimit 3
+bind_timelimit 3
+bind_policy soft
+idle_timelimit 3
+
+<% if @binddn -%>
+binddn <%= @binddn %>
+<% end -%>
+<% if @bindpw -%>
+bindpw <%= @bindpw %>
+<% end -%>

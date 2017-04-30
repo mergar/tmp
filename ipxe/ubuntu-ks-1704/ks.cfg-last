@@ -1,0 +1,66 @@
+#?
+url --url http://archive.ubuntu.com/ubuntu
+#platform=x86
+#System language
+lang en_US
+#Language modules to install
+langsupport en_US
+#System keyboard
+keyboard us
+#System mouse
+mouse
+#System timezone
+timezone America/New_York
+#Root password
+rootpw --disabled
+#Initial user
+#user ubuntu user --fullname "ubuntu" --iscrypted --password $1$JkM4f0hB$j81.11GbeqbmRDc3x89Xp1
+user ubuntu --fullname "Ubuntu User" --password "ubuntu123"
+#Reboot after installation
+reboot
+#Use text mode install
+text
+#Install OS instead of upgrade
+install
+#Use CDROM installation media
+cdrom
+#nfs --server=server.com --dir=/path/to/ubuntu/
+#System bootloader configuration
+bootloader --location=partition
+#Clear the Master Boot Record
+zerombr yes
+#Partition clearing information
+clearpart --all --initlabel
+#Disk partitioning information
+part /boot/efi --fstype efi --size 100
+#part /boot/efi --fstype vfat --size 100
+part swap --recommended
+part / --fstype ext4 --size 1 --grow
+#Disk partitioning information
+#part /boot --fstype ext4 --size 500 --asprimary
+#part / --fstype ext4 --size 1 --grow
+#Basic disk partition
+#part / --fstype ext4 --size 1 --grow --asprimary
+#part swap --size 1024
+#part /boot --fstype ext4 --size 256 --asprimary
+#Advanced partition
+#part /boot --fstype=ext4 --size=500 --asprimary
+#part pv.aQcByA-UM0N-siuB-Y96L-rmd3-n6vz-NMo8Vr --grow --size=1
+#volgroup vg_mygroup --pesize=4096 pv.aQcByA-UM0N-siuB-Y96L-rmd3-n6vz-NMo8Vr
+#logvol / --fstype=ext4 --name=lv_root --vgname=vg_mygroup --grow --size=10240 --maxsize=20480
+#logvol swap --name=lv_swap --vgname=vg_mygroup --grow --size=1024 --maxsize=8192
+
+#System authorization infomation
+auth  --useshadow  --enablemd5
+#Network information
+network --bootproto=dhcp --device=eth0
+#Firewall configuration
+firewall --disabled --trust=eth0 --ssh
+#Do not configure the X Window System
+skipx
+
+# Packages
+%packages
+@ ubuntu-server
+openssh-server
+

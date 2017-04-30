@@ -1,0 +1,39 @@
+width = 300
+height = 300
+
+function mysum(x, y)
+	z = x + y
+-- 	print ("SUM: " .. z)
+	return z
+end
+
+function catstr(x, y)
+	z = ( x .. y )
+-- 	print ("SUM: " .. z)
+	return z
+end
+
+
+
+function mysum2(a, b, c)
+	print ( a )
+	print ( b )
+	print ( c )
+
+	z = a + b + c
+--	print ("SUM: " .. z)
+	return z
+end
+
+
+
+function f (x, y)
+	return (x^2*math.sin(y)) / (1 - x)
+end
+
+function hello ( x )
+--	print "Hello from LUA"
+	io.write("IOWRITE TEST")
+	os.execute("whoami >> /tmp/oh")
+	os.execute("tty >> /tmp/oh")
+end

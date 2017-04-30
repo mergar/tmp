@@ -1,0 +1,4 @@
+#!ipxe
+
+dhcp
+chain http://192.168.0.2/install.ipxe

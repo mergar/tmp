@@ -1,0 +1,81 @@
+#!/usr/local/bin/cbsd
+#v10.1.0
+MYARG="jname module"
+MYOPTARG="mode"
+MYDESC="Generate puppet manifests"
+ADDHELP="module= specify module name\n\
+mode= apply - puppet apply\n"
+
+. ${subr}
+. ${system}
+. ${tools}
+. ${strings}
+
+init $*
+
+. ${jrcconf}
+[ $? -eq 1 ] && err 1 "${MAGENTA}No such jail: ${GREEN}${jname}${NORMAL}"
+
+[ -z "${mode}" ] && mode="show"
+
+formfile="${jailsysdir}/${jname}/helpers/${module}.sqlite"
+[ ! -r ${formfile} ] && err 1 "${MAGENTA}No such formfile: ${GREEN}${formfile}${NORMAL}"
+
+sitepp="${moduledir}/puppet.d/module_${module}/site.pp"
+[ ! -r ${sitepp} ] && err 1 "${MAGENTA}No such sitepp: ${GREEN}${sitepp}${NORMAL}"
+
+. ${sitepp}
+
+mksitefile="${moduledir}/puppet.d/modules_${module}/site.pp"
+
+. ${workdir}/imghelper.subr
+
+param=$( cbsdsql ${formfile} SELECT param FROM forms ORDER BY order_id |/usr/bin/xargs )
+load_forms
+
+# todo
+# reload only when changed
+
+puppet_apply()
+{
+	[ ${jid} -eq 0 ] && jstart ${jname}
+
+	_res=$( pkg jname=${jname} mode=query %n puppet 2>/dev/null )
+
+	[ "${_res}" != "puppet" ] && pkg jname="${jname}" mode=install puppet
+
+	# check again
+	_res=$( pkg jname=${jname} mode=query %n puppet 2>/dev/null )
+
+	[ "${_res}" != "puppet" ] && err 1 "${MAGENTA}No such puppet in ${jname}${NORMAL}"
+
+	[ $baserw -eq 1 ] && path="${data}"
+
+	[ -z "${path}" ] && err 1 "No path variable"
+
+	[ ! -d ${moduledir}/puppet.d/puppet_root/modules ] && err 1 "No such ${moduledir}/puppet.d/puppet_root/modules"
+	[ ! -d "${path}/usr/local/etc/puppet/modules" ] && mkdir -p ${path}/usr/local/etc/puppet/modules
+
+	/sbin/mount -t nullfs -o ro ${moduledir}/puppet.d/puppet_root/modules ${path}/usr/local/etc/puppet/modules
+
+	[ $? -ne 0 ] && err 1 "Error mount ${moduledir}/puppet.d/puppet_root/modules to /usr/local/etc/puppet/modules inside jail"
+
+	generate_manifest > ${path}/tmp/${helpername}.pp
+	jexec jname=${jname} /usr/local/bin/puppet apply --color false --log_level err /tmp/${helpername}.pp 2>&1
+
+	[ -n "${have_restart}" ] && jexec jname=$jname ${have_restart}
+
+	/sbin/umount ${path}/usr/local/etc/puppet/modules
+}
+
+
+
+case "${mode}" in
+	"apply")
+		${ECHO} "${MAGENTA}Applying puppet manifest for: ${GREEN}${module}${NORMAL}"
+		puppet_apply
+		;;
+	*)
+		generate_manifest
+		;;
+esac

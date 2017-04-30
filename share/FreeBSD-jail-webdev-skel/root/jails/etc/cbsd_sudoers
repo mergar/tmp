@@ -1,0 +1,3 @@
+Defaults     env_keep += "workdir DIALOG NOCOLOR"
+Cmnd_Alias   CBSD_CMD = /root/jails/sudoexec/*,/usr/local/cbsd/sudoexec/*
+cbsd   ALL=(ALL) NOPASSWD: CBSD_CMD

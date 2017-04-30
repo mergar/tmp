@@ -1,0 +1,87 @@
+#!/usr/local/bin/cbsd
+#v10.1.0
+globalconf="${workdir}/cbsd.conf";
+CBSDMODULE="jail"
+MYDESC="Ncurses based control for jail"
+MYARG="jname"
+MYOPTARG=""
+
+set -e
+. ${globalconf}
+set +e
+
+. ${subr}
+. ${dialog}
+. ${strings}
+. ${tools}
+
+[ -z "${1}" ] && select_jail_by_list -s "List of local jails:" -r 0
+init $*
+
+dialog_menu_main()
+{
+	repo=0 # flags for execution jsetup-tui from repo get image
+
+	local title=" Control for ${jname} "
+	hline=
+
+	local menu_list="
+		'EXIT'	'EXIT'	'Exit'
+	" # END-QUOTE
+
+
+	if [ ${jid} -ne 0 ]; then
+			menu_list="${menu_list} 'jstop'		'stop jail'		'cbsd jstop jname=${jname}'"
+			menu_list="${menu_list} 'jlogin'	'attach to console'	'cbsd jlogin jname=${jname}'"
+		else
+			menu_list="${menu_list} 'jstart'	'start jail'	'cbsd jstart jname=${jname}'"
+	fi
+
+	menu_list="${menu_list}	'jconfig'	'config'	'cbsd jconfig jname=${jname}'"
+	menu_list="${menu_list}	'-'	'-'	''"
+	menu_list="${menu_list}	'jremove'	'destroy jail'	'cbsd jremove jname=${jname}'"
+
+	cbsd_menubox
+	retval=$?
+
+	# Only update default-item on success
+	[ $retval -eq $DIALOG_OK ] && f_dialog_default_store "$menu_choice"
+	return $retval
+}
+
+### MAIN
+. ${jrcconf}
+[ $? -eq 1 ] && err 1 "${MAGENTA}No such jail: ${GREEN}${jname}${NORMAL}"
+
+f_dialog_title "$msg_system_console_configuration"
+f_dialog_backtitle "${ipgm:+bsdconfig }$pgm"
+f_mustberoot_init
+
+while [ 1 ]; do
+	. ${jrcconf}
+	dialog_menu_main || f_die
+	case "${mtag}" in
+		"EXIT")
+			exit 0
+			;;
+		jlogin)
+			/usr/local/bin/cbsd ${mtag} jname=${jname}
+			;;
+		jstart|jstop)
+			/usr/local/bin/cbsd ${mtag} jname=${jname}
+			echo " *** Complete. Press any key"
+			read p
+			;;
+		jremove)
+			if getyesno "Remove jail from filesystem. Are you sure ?"; then
+				/usr/local/bin/cbsd ${mtag} jname=${jname}
+				echo " *** Complete. Press any key"
+				read p
+				f_die
+			fi
+			;;
+		"jconfig")
+			/usr/local/bin/cbsd jconfig jname=${jname}
+			;;
+	esac
+done
