@@ -10,9 +10,7 @@ item --gap Debian
 item debian-8.6 Debian 8.6
 item debian-8.6-preseed Debian 8.6 preseed
 item --gap CentOS
-item centos-7 CentOS 7
 item centos-7-preseed CentOS 7 preseed
-item centos-7-preseed-new CentOS 7 preseed new
 item --gap Ubuntu
 item ubuntu-16.04-preseed Ubuntu 16.04
 item ubuntu-16.04-preseed Ubuntu 16.04 preseed
@@ -117,25 +115,33 @@ initrd --name initramfs http://10.0.0.1/ubuntu-installer/amd64/initrd.gz ramdisk
 boot
 
 :centos-7-preseed
+set base-url http://192.168.0.2
 #kernel http://10.0.0.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.0.1/centos-ks-7/ks.cfg -- network ksdevice=bootif
 #kernel http://10.0.0.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.0.1/centos-ks-7/ks.cfg ksdevice=link edd=off net.ifnames=0 biosdevname=0
-kernel http://10.0.0.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.0.1/centos-ks-7/ks.cfg -- network ksdevice=bootif
-initrd --name initramfs http://10.0.0.1/centos-installer-7/initrd.img ramdisk_size=16432 root=/dev/rd/0 rw  --
+#kernel http://10.0.0.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.0.1/centos-ks-7/ks.cfg -- network ksdevice=bootif
+#initrd --name initramfs http://10.0.0.1/centos-installer-7/initrd.img ramdisk_size=16432 root=/dev/rd/0 rw  --
+kernel ${base-url}/centos-installer-7/vmlinuz initrd=initrd repo=${base} ksdevice=link edd=off ks=${base-url}/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
+initrd --name initrd ${base-url}/centos-installer-7/initrd.img ksdevice=link edd=off ks=${base-url}/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
 boot
 
 :centos-7-preseed-new
-set base-url http://10.0.0.1
-kernel ${base-url}/centos-installer-7/initrd.img initrd=initramfs
-initrd --name initramfs ${base-url}/centos-installer/vmlinuz ramdisk_size=16432 root=/dev/rd/0 rw  --
-##imgargs linux preseed/url=${base-url}/ubuntu-ks-1704/preseed.cfg initrd=initramfs ks=http://10.0.0.1/ubuntu-ks-1704/ks.cfg ramdisk_size=16432 root=/dev/rd/0 rw  --
-#imgargs linux ks=http://10.0.0.1/ubuntu-ks-1704/ksbootstrap.cfg preseed/url=${base-url}/ubuntu-ks-1704/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
-## DEBCONF_DEBUG=5
-#boot
+set base-url http://192.168.0.2
+kernel ${base-url}/centos-installer-7/vmlinuz initrd=initrd
+initrd --name initrd ${base-url}/centos-installer-7/initrd.img ramdisk_size=16432 root=/dev/rd/0 rw  --
+#kernel ${base-url}/centos-installer-7/initrd.img
+#chain ${base-url}/centos-installer-7/vmlinuz initrd=initrd.img
+#initrd --name initramfs ${base-url}/centos-installer/vmlinuz ramdisk_size=16432 root=/dev/rd/0 rw  --
+#initrd ${17}/Media-Depot/linux/CentOS/latest/EL/x86-64/OEM/os/images/pxeboot/initrd.img
+#chain ${17}/Media-Depot/linux/CentOS/latest/EL/x86-64/OEM/os/images/pxeboot/vmlinuz initrd=initrd.img
+boot
 
 
 :centos-7
-initrd http://10.0.0.1/centos-installer-7/initrd.img
-chain http://10.0.0.1/centos-installer-7/vmlinuz ksdevice=link edd=off ks=http://10.0.0.1/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
+set base-url http://192.168.0.2
+initrd --name initramfs ${base-url}/centos-installer-7/initrd.img
+kernel ${base-url}/centos-installer-7/vmlinuz ksdevice=link edd=off ks=${base-url}/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
+imgstat
+echo Boot
 boot
 
 #initrd http://mirror.netcologne.de/centos/7/os/x86_64/isolinux/initrd.img
