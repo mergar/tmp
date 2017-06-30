@@ -1,18 +1,31 @@
 #!/bin/sh
 
-. /etc/rc.conf
-
 # MAIN()
 while getopts "v:a:t:s:" opt; do
 	case "${opt}" in
-		v) ver="${OPTARG}" ;;
-		a) oarch="${OPTARG}" ;;
-		t) targetarch="${OPTARG}" ;;
-		s) STABLE="${OPTARG}" ;;
+		v) orver="${OPTARG}" ;;
+		a) orarch="${OPTARG}" ;;
+		t) ortargetarch="${OPTARG}" ;;
+		s) ORSTABLE="${OPTARG}" ;;
 		*) usage ;;
 	esac
 	shift $(($OPTIND - 1))
 done
+
+. /etc/rc.conf
+workdir="${cbsd_workdir}"
+
+set -e
+. ${workdir}/cbsd.conf
+. ${workdir}/nc.subr
+set +e
+
+export NOCOLOR=1
+
+[ -n "${orver}" ] && ver="${orver}"
+[ -n "${orarch}" ] && arch="${orarch}"
+[ -n "${ortargetarch}" ] && otargetarch="${ortargetarch}"
+[ -n "${ORSTABLE}" ] && STABLE="${ORSTABLE}"
 
 [ -z "${ver}" ] && err 1 "Give me version, e.g: -v 11.0"
 [ -z "${stable}" ] && STABLE=0
