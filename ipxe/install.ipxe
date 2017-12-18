@@ -111,8 +111,8 @@ boot
 :debian-9.3-preseed
 set base-url http://10.0.2.1
 #dhcp
-initrd --name initramfs ${base-url}/debian-installer-8/gtk/initrd.gz
-kernel ${base-url}/debian-installer-8/gtk/vmlinuz initrd=initramfs auto=true priority=critical url=http://10.0.2.1/debian-ks-9/preseed.cfg suite=stretch
+initrd --name initramfs ${base-url}/debian-installer-9/gtk/initrd.gz
+kernel ${base-url}/debian-installer-9/gtk/vmlinuz initrd=initramfs auto=true priority=critical url=http://10.0.2.1/debian-ks-9/preseed.cfg suite=stretch
 boot
 
 :ubuntu
