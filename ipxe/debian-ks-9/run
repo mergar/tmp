@@ -1,0 +1,2 @@
+echo preseed.cfg | cpio -H newc -o > preseed.cfg.cpio
+
