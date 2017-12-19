@@ -51,33 +51,27 @@ d-i partman-lvm/confirm_nooverwrite boolean true
 d-i partman-auto/choose_recipe select boot-root
 d-i partman-auto/expert_recipe string                         \
       boot-root ::                                            \
-		538 10 1075 free \
+		538 538 1075 free \
 		$iflabel{ gpt } \
 		$reusemethod{ } \
 		method{ efi } \
 		format{ } \
 		. \
-              360 20 200 ext4                                 \
+              190 50 200 ext3                                 \
                       $primary{ } $bootable{ }                \
                       method{ format } format{ }              \
-                      use_filesystem{ } filesystem{ ext4 }    \
+                      use_filesystem{ } filesystem{ ext3 }    \
                       mountpoint{ /boot }                     \
               .                                               \
-              4000 40 4096 linux-swap                         \
+              4000 512 4096 linux-swap                        \
                       $lvmok{ } lv_name{ swap }               \
                       method{ swap } format{ }                \
               .                                               \
-              5000 50 5000 ext4                               \
+              500 10000 -1 xfs                                \
                       $lvmok{ } lv_name{ root }               \
                       method{ format } format{ }              \
-                      use_filesystem{ } filesystem{ ext4 }     \
-                      mountpoint{ / }                         \
-              .
-              5000 50 -1 ext4                                 \
-                      $lvmok{ } lv_name{ storage }               \
-                      method{ format } format{ }              \
                       use_filesystem{ } filesystem{ xfs }     \
-                      mountpoint{ /mnt }                      \
+                      mountpoint{ / }                         \
               .
 
 d-i partman-partitioning/confirm_write_new_label boolean true

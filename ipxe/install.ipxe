@@ -70,62 +70,62 @@ initrd --name initramfs http://mirror.yandex.ru/debian/dists/Debian8.7/main/inst
 boot
 
 :ubuntu-16.04-preseed
-kernel http://10.0.2.1/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://10.0.2.1/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
-initrd --name initramfs http://10.0.2.1/ubuntu-installer-1704/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
+kernel http://172.16.0.2/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://172.16.0.2/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
+initrd --name initramfs http://172.16.0.2/ubuntu-installer-1704/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
 boot
 
 :ubuntu-17.04-preseed
-kernel http://10.0.2.1/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://10.0.2.1/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
-initrd --name initramfs http://10.0.2.1/ubuntu-installer-1704/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
+kernel http://172.16.0.2/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://172.16.0.2/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
+initrd --name initramfs http://172.16.0.2/ubuntu-installer-1704/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
 boot
 
 :ubuntu-17.04-preseed-new
-set base-url http://10.0.2.1
-kernel ${base-url}/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://10.0.2.1/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
+set base-url http://172.16.0.2
+kernel ${base-url}/ubuntu-installer-1704/amd64/linux initrd=initramfs ks=http://172.16.0.2/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
 initrd --name initramfs ${base-url}/ubuntu-installer-1704/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
-imgargs linux ks=http://10.0.2.1/ubuntu-ks-1704/ksbootstrap.cfg preseed/url=${base-url}/ubuntu-ks-1704/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
+imgargs linux ks=http://172.16.0.2/ubuntu-ks-1704/ksbootstrap.cfg preseed/url=${base-url}/ubuntu-ks-1704/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
 # DEBCONF_DEBUG=5
 boot
 
 
 :debian-8.6-preseeda
-set base-url http://10.0.2.1
-kernel ${base-url}/debian-installer-8/gtk/vmlinuz initrd=initramfs ks=http://10.0.2.1/debian-ks-8/ks.cfg -- network ksdevice=bootif
+set base-url http://172.16.0.2
+kernel ${base-url}/debian-installer-8/gtk/vmlinuz initrd=initramfs ks=http://172.16.0.2/debian-ks-8/ks.cfg -- network ksdevice=bootif
 initrd --name initramfs ${base-url}/debian-installer-8/gtk/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
-initrd http://10.0.2.1/debian-ks-8/ksbootstrap.cfg preseed.cfg
-#initrd ${base-url}/debian-ks-8/preseed.cfgks=http://10.0.2.1/debian-ks-8/ksbootstrap.cfg preseed.cfg
-initrd linux ks=http://10.0.2.1/debian-ks-8/ksbootstrap.cfg preseed/url=${base-url}/debian-ks-8/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
-#imgargs linux ks=http://10.0.2.1/debian-ks-8/ksbootstrap.cfg preseed/url=${base-url}/debian-ks-8/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
+initrd http://172.16.0.2/debian-ks-8/ksbootstrap.cfg preseed.cfg
+#initrd ${base-url}/debian-ks-8/preseed.cfgks=http://172.16.0.2/debian-ks-8/ksbootstrap.cfg preseed.cfg
+initrd linux ks=http://172.16.0.2/debian-ks-8/ksbootstrap.cfg preseed/url=${base-url}/debian-ks-8/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
+#imgargs linux ks=http://172.16.0.2/debian-ks-8/ksbootstrap.cfg preseed/url=${base-url}/debian-ks-8/preseed.cfg initrd=initramfs ramdisk_size=16432 root=/dev/rd/0 rw  --
 # DEBCONF_DEBUG=5
 boot
 
-#ks=http://10.0.2.1/debian-ks-8/ks.cfg
+#ks=http://172.16.0.2/debian-ks-8/ks.cfg
 
 :debian-8.6-preseed
-set base-url http://10.0.2.1
+set base-url http://172.16.0.2
 kernel ${base-url}/debian-installer-8/gtk/vmlinuz initrd=initramfs initrd=preseed.cfg -- network ksdevice=bootif
 initrd --name initramfs ${base-url}/debian-installer-8/gtk/initrd.gz
 initrd --name preseed.cfg ${base-url}/debian-ks-8/preseed.cfg.cpio
 boot
 
 :debian-9.3-preseed
-set base-url http://10.0.2.1
+set base-url http://172.16.0.2
 #dhcp
 initrd --name initramfs ${base-url}/debian-installer-9/gtk/initrd.gz
-kernel ${base-url}/debian-installer-9/gtk/vmlinuz initrd=initramfs auto=true priority=critical url=http://10.0.2.1/debian-ks-9/preseed.cfg suite=stretch
+kernel ${base-url}/debian-installer-9/gtk/vmlinuz initrd=initramfs auto=true priority=critical url=http://172.16.0.2/debian-ks-9/preseed.cfg suite=stretch
 boot
 
 :ubuntu
-kernel http://10.0.2.1/ubuntu-installer/amd64/linux initrd=initramfs ks=http://10.0.2.1/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
-initrd --name initramfs http://10.0.2.1/ubuntu-installer/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
+kernel http://172.16.0.2/ubuntu-installer/amd64/linux initrd=initramfs ks=http://172.16.0.2/ubuntu-ks-1704/ks.cfg -- network ksdevice=bootif
+initrd --name initramfs http://172.16.0.2/ubuntu-installer/amd64/initrd.gz ramdisk_size=16432 root=/dev/rd/0 rw  --
 boot
 
 :centos-7-preseed
 set base-url http://192.168.0.2
-#kernel http://10.0.2.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.2.1/centos-ks-7/ks.cfg -- network ksdevice=bootif
-#kernel http://10.0.2.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.2.1/centos-ks-7/ks.cfg ksdevice=link edd=off net.ifnames=0 biosdevname=0
-#kernel http://10.0.2.1/centos-installer-7/vmlinuz initrd=initramfs ks=http://10.0.2.1/centos-ks-7/ks.cfg -- network ksdevice=bootif
-#initrd --name initramfs http://10.0.2.1/centos-installer-7/initrd.img ramdisk_size=16432 root=/dev/rd/0 rw  --
+#kernel http://172.16.0.2/centos-installer-7/vmlinuz initrd=initramfs ks=http://172.16.0.2/centos-ks-7/ks.cfg -- network ksdevice=bootif
+#kernel http://172.16.0.2/centos-installer-7/vmlinuz initrd=initramfs ks=http://172.16.0.2/centos-ks-7/ks.cfg ksdevice=link edd=off net.ifnames=0 biosdevname=0
+#kernel http://172.16.0.2/centos-installer-7/vmlinuz initrd=initramfs ks=http://172.16.0.2/centos-ks-7/ks.cfg -- network ksdevice=bootif
+#initrd --name initramfs http://172.16.0.2/centos-installer-7/initrd.img ramdisk_size=16432 root=/dev/rd/0 rw  --
 kernel ${base-url}/centos-installer-7/vmlinuz initrd=initrd repo=${base} ksdevice=link edd=off ks=${base-url}/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
 initrd --name initrd ${base-url}/centos-installer-7/initrd.img ksdevice=link edd=off ks=${base-url}/centos-ks-7/ks.cfg net.ifnames=0 biosdevname=0
 boot
@@ -154,19 +154,19 @@ boot
 #chain http://mirror.netcologne.de/centos/7/os/x86_64/isolinux/vmlinuz ksdevice=link edd=off ks=http://preseed.panticz.de/kickstart/centos7-minimal.cfg net.ifnames=0 biosdevname=0
 
 :freebsdb
-set iso http://10.0.2.1/x.iso
-kernel http://10.0.2.1/memdisk iso raw
+set iso http://172.16.0.2/x.iso
+kernel http://172.16.0.2/memdisk iso raw
 initrd ${iso}
 boot
 
 :freebsd
-kernel http://10.0.2.1/loader.efi
-initrd http://10.0.2.1/kernel
+kernel http://172.16.0.2/loader.efi
+initrd http://172.16.0.2/kernel
 set root-path /FreeBSD
 boot
 
 :win10o
-set serverip 10.0.2.1
+set serverip 172.16.0.2
 set tftpboot tftp://${serverip}/
 set tftpbootpath /mnt/Daten/tftpboot
 
@@ -184,7 +184,7 @@ initrd ${root-path}/boot/fonts/wgl4_boot.ttf wgl4_boot.ttf
 boot || goto failed
 
 :win10
-set serverip 10.0.2.1
+set serverip 172.16.0.2
 set tftpboot tftp://${serverip}/
 echo Booting Windows Installer...
 set root-path ${tftpboot}/ipxe
