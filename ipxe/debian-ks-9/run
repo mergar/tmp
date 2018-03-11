@@ -1,2 +1,3 @@
-echo preseed.cfg | cpio -H newc -o > preseed.cfg.cpio
+#echo preseed.cfg | cpio -H newc -o > preseed.cfg.cpio
+echo veil_preseed.cfg | cpio -H newc -o > preseed.cfg.cpio
 

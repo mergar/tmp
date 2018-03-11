@@ -11,6 +11,7 @@ item debian-8.6 Debian 8.6
 item debian-8.6-preseed Debian 8.6 preseed
 item debian-9.3 Debian 9.3
 item debian-9.3-preseed Debian 9.3 preseed
+item veil-dev ECPVeil DEV
 item --gap CentOS
 item centos-7-preseed CentOS 7 preseed
 item --gap Ubuntu
@@ -113,6 +114,38 @@ set base-url http://172.16.0.2
 #dhcp
 initrd --name initramfs ${base-url}/debian-installer-9/gtk/initrd.gz
 kernel ${base-url}/debian-installer-9/gtk/vmlinuz initrd=initramfs auto=true priority=critical url=http://172.16.0.2/debian-ks-9/preseed.cfg suite=stretch
+boot
+
+:veil-deva
+set base-url http://172.16.0.2
+#kernel initrd=initrd.gz initrd=preseed.cfg.cpio
+initrd --name initramfs ${base-url}/debian-installer-9/gtk/initrd.gz -- network ksdevice=bootif
+#initrd url=http://172.16.0.2/debian-ks-9/preseed.cfg.cpio
+kernel ${base-url}/debian-installer-9/gtk/vmlinuz initrd=initramfs auto=true priority=critical auto=true layoutcode=pt language-name=English ask_detect=false url=http://172.16.0.2/debian-ks-9/veil_preseed.cfg suite=stretch
+boot
+
+:veil-devb
+set base-url http://172.16.0.2
+kernel debian-ks-9/vmlinuz
+# initrd=debian-ks-9/initrd.gz initrd=debian-ks-9/preseed.cfg.cpio
+initrd debian-ks-9/initrd.gz
+initrd debian-ks-9/preseed.cfg.cpio
+boot
+
+# this work
+:veil-devc
+set base-url http://172.16.0.2
+kernel debian-ks-9/linux initrd=initramfs auto=true priority=critical preseed/url=http://172.16.0.2/debian-ks-9/preseed.cfg nfsroot=192.168.2.10:/nfsroot ip=dhcp -- network ksdevice=bootif
+# initrd=debian-ks-9/initrd.gz initrd=debian-ks-9/preseed.cfg.cpio
+initrd --name initramfs debian-ks-9/initrd.gz ramdisk_size=16432
+initrd debian-ks-9/preseed.cfg.cpio
+boot
+
+# this work
+:veil-dev
+set base-url http://172.16.0.2
+kernel debian-ks-9/linux initrd=initramfs auto=true priority=critical preseed/url=http://172.16.0.2/debian-ks-9/veil_preseed_net.cfg ip=dhcp
+initrd --name initramfs debian-ks-9/initrd.gz ramdisk_size=16432
 boot
 
 :ubuntu
