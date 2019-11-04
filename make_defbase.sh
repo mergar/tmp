@@ -1,5 +1,7 @@
 #!/bin/sh
 
+: ${distdir="/usr/local/cbsd"}
+
 # MAIN()
 while getopts "v:a:t:s:" opt; do
 	case "${opt}" in
@@ -12,12 +14,16 @@ while getopts "v:a:t:s:" opt; do
 	shift $(($OPTIND - 1))
 done
 
-. /etc/rc.conf
-workdir="${cbsd_workdir}"
+if [ -z "${workdir}" ]; then
+	[ -z "${cbsd_workdir}" ] && . /etc/rc.conf
+	[ -z "${cbsd_workdir}" ] && exit 0
+	workdir="${cbsd_workdir}"
+fi
 
 set -e
-. ${workdir}/cbsd.conf
-. ${workdir}/nc.subr
+. ${distdir}/cbsd.conf
+. ${distdir}/tools.subr
+. ${distdir}/nc.subr
 set +e
 
 export NOCOLOR=1
