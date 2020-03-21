@@ -42,17 +42,18 @@ export NOCOLOR=1
 tmpfiles=$( mktemp )
 trap "/bin/rm -f ${tmpfiles}" HUP INT ABRT BUS TERM EXIT
 
-BASE_DIR="${workdir}/basejail/base_${arch}_${arch}_${ver}"
+
+BASE_DIR="${workdir}/src/src_${ver}/etcupdate/current"
 
 if [ ! -d "${BASE_DIR}" ]; then
-	echo "No $BASE_DIR"
+	echo "No ${BASE_DIR}: cbsd etcupdate mode=extract ver=${ver}"
 	exit 0
 fi
 
 hl_count=0
 rm -f base_hl_*.txt
 
-find ${BASE_DIR} \( -type f -or -type l \) -print |while read _p; do
+find ${BASE_DIR} \( -type f -or -type l \) -print | while read _p; do
 	a=$( echo ${_p}| sed s:${BASE_DIR}::g )
 	dir=$( dirname ${a} )
 
