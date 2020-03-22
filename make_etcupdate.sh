@@ -42,7 +42,6 @@ export NOCOLOR=1
 tmpfiles=$( mktemp )
 trap "/bin/rm -f ${tmpfiles}" HUP INT ABRT BUS TERM EXIT
 
-
 BASE_DIR="${workdir}/src/src_${ver}/etcupdate/current"
 
 if [ ! -d "${BASE_DIR}" ]; then
@@ -53,12 +52,14 @@ fi
 hl_count=0
 rm -f base_hl_*.txt
 
+echo "/etc"		# entity /etc dir
+
 find ${BASE_DIR} \( -type f -or -type l \) -print | while read _p; do
 	a=$( echo ${_p}| sed s:${BASE_DIR}::g )
 	dir=$( dirname ${a} )
 
 	case "${dir}" in
-		/rescue*|/usr/tests*|/compat/*|/sys/*)
+		/etc*)
 			continue
 			;;
 	esac
@@ -89,4 +90,4 @@ find ${BASE_DIR} \( -type f -or -type l \) -print | while read _p; do
 
 done
 
-sort -u ${tmpfiles} |sort
+sort -u ${tmpfiles} | sort
