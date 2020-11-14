@@ -1,0 +1,16 @@
+
+# CBSD upfile global settings
+globals()
+{
+	vm_os_type="linux"
+	vm_os_profile="cloud-kubernetes-20"
+
+	ip4_gw="10.0.0.1"
+	ci_gw4="${ip4_gw}"
+	imgtype="zvol"
+	#imgtype="md"
+	runasap=1
+	ssh_wait=1
+	interface="bridge1"
+}
+

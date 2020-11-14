@@ -1,0 +1,7 @@
+# List of the allowed cbsd commands
+SECCMD="\
+${SECCMD}
+k8s \
+k8s-bstart \
+k8s-join \
+"

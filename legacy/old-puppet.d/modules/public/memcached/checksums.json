@@ -1,0 +1,21 @@
+{
+  "CHANGELOG.md": "e00ff7418794e1689da35958d7e414b8",
+  "Gemfile": "e846547a291490aef008ae7352850e6e",
+  "LICENSE": "1322039bbc8e3ff4e74252ec65303861",
+  "README-DEVELOPER": "d45048731ddb158a56a1b26293fb5dbf",
+  "README.md": "e6f9967a06fb75debd889ba614d95cdc",
+  "Rakefile": "0db34b2e6f3b6e6950648814bf11b24c",
+  "lib/puppet/functions/memcached/max_memory.rb": "a6da0bf2422e97670273699fed49c6a8",
+  "manifests/init.pp": "db29a9c18f0cc729e1002c1170239d84",
+  "manifests/params.pp": "aa34ef20b9dbb95323fa5c7bcb6f8dbb",
+  "metadata.json": "baf5b7114dfadbc38e6bfa312110ab7c",
+  "spec/classes/init_spec.rb": "b4d46ea3b887d6740dfd4523002d2d4d",
+  "spec/spec.opts": "a600ded995d948e393fbe2320ba8e51c",
+  "spec/spec_helper.rb": "c8a87dbc00da5bcbd1861a2fa7efa0af",
+  "templates/memcached.conf.erb": "7a35b17f4dfafcac309ccc374c6b3731",
+  "templates/memcached_freebsd_rcconf.erb": "33073e939f6133b028776433acabadcb",
+  "templates/memcached_svcprop.erb": "228fef8c2d37c6ad612c1a42704f4fbc",
+  "templates/memcached_sysconfig.erb": "cd81223faaaf07b2c29ccc7e541d2b4e",
+  "templates/memcached_windows.erb": "2ad16442107efe6d684dd1e5965f76db",
+  "tests/init.pp": "2cd83e4421f8620c6d925bd3299ed2d5"
+}

@@ -1,0 +1,65 @@
+#!/usr/bin/env python3.7
+#v11.0.7
+import json
+import os
+import argparse
+import subprocess
+from subprocess import check_output
+import sys
+
+RCCONF_FILE = "/etc/rc.conf"
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def get_rcconf_var(var):
+  result = check_output(
+    ". {file}; echo ${var_name}".format(
+    file=RCCONF_FILE,
+    var_name=var), shell=True).decode().rstrip()
+  return result
+
+def get_iface_list():
+    workdir = get_rcconf_var("cbsd_workdir")
+    cmd = subprocess.Popen(['/usr/local/cbsd/misc/nics-list', '-s', '"tap bridge vboxnet lo xnb"' ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return (cmd.communicate()[0])
+
+def get_args():
+    parser = argparse.ArgumentParser(description='show interfaces')
+    parser.add_argument('--template',  type=str2bool, nargs='?', const=True, help='show template')
+    parser.add_argument('--vm', type=str2bool, nargs='?', const=True, help='show generic vm')
+    return parser.parse_args()
+
+
+def main(args):
+  _locals = locals()
+  iface_list = get_iface_list()
+
+  # check for variable exist
+  try:
+    iface_list
+  except NameError:
+    print ("No interfaces")
+    exit
+
+  arr_all_ifaces=[]
+
+  for iface in iface_list.split():
+    ifs=iface.decode().rstrip()
+    arr_profile=[]
+
+    arr_profile = {
+      "name": ifs,
+    }
+
+    arr_all_ifaces.append(arr_profile)
+
+  print(json.dumps(arr_all_ifaces))
+
+if __name__ == '__main__':
+    main(get_args())

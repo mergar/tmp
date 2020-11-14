@@ -1,0 +1,14 @@
+java::distribution: jre
+java::package: java-1.8.0-openjdk
+
+profiles::mq::kafka::globals:
+  manage_java: false
+  user_shell: /sbin/nologin
+  kafka_version: '#kafka_version#'
+  scala_version: '#scala_version#'
+
+profiles::mq::kafka::broker:
+  config:
+    'broker.id': #broker_id#
+    'zookeeper.connect': #zookeeper_connect#
+    'advertised.listeners': PLAINTEXT://"%{::networking.ip}":9092

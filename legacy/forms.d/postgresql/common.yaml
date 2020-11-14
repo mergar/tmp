@@ -1,0 +1,59 @@
+profiles::db::postgresql::globals:
+  manage_package_repo: false
+  version: '#postgres_ver#'
+
+profiles::db::postgresql::db_configs:
+  'listen_addresses':
+    value: '#listen_addresses#'
+  'bgwriter_delay':
+    value: '#bgwriter_delay#'
+  'checkpoint_completion_target':
+    value: '#checkpoint_completion_target#'
+  'commit_delay':
+    value: '#commit_delay#'
+  'datestyle':
+    value: '#datestyle#'
+  'effective_io_concurrency':
+    value: '#effective_io_concurrency#'
+  'hot_standby':
+    value: '#hot_standby#'
+  'listen_addresses':
+    value: '#listen_addresses#'
+  'log_destination':
+    value: '#log_destination#'
+  'log_filename':
+    value: '#log_filename#'
+  'log_rotation_age':
+    value: '#log_rotation_age#'
+  'log_timezone':
+    value: '#log_timezone#'
+  'log_truncate_on_rotation':
+    value: '#log_truncate_on_rotation#'
+  'maintenance_work_mem':
+    value: '#maintenance_work_mem#'
+  'max_connections':
+    value: '#max_connections#'
+  'max_replication_slots':
+    value: '#max_replication_slots#'
+  'max_wal_senders':
+    value: '#max_wal_senders#'
+  'max_wal_size':
+    value: '#max_wal_size#'
+  'max_worker_processes':
+    value: '#max_worker_processes#'
+  'shared_buffers':
+    value: '#shared_buffers#'
+  'synchronous_commit':
+    value: '#synchronous_commit#'
+  'temp_buffers':
+    value: '#temp_buffers#'
+  'timezone':
+    value: '#timezone#'
+  'wal_compression':
+    value: '#wal_compression#'
+  'wal_keep_segments':
+    value: '#wal_keep_segments#'
+  'wal_level':
+    value: '#wal_level#'
+  'work_mem':
+    value: '#work_mem#'

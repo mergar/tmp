@@ -1,0 +1,30 @@
+#!/usr/local/bin/cbsd
+#v12.1.4
+globalconf="${distdir}/cbsd.conf"
+CBSDMODULE="k8s"
+MYARG="jname conf"
+MYOPTARG=""
+MYDESC="Kubernetes CBSD module"
+ADDHELP=""
+EXTHELP="modules/k8s.d"
+
+. ${subr}
+. ${cbsdinit}
+. ${system}
+
+. ${jrcconf}
+[ $? -eq 1 ] && err 1 "${N1_COLOR}No such jail: ${N2_COLOR}${jname}${N0_COLOR}"
+
+MAX_TIMEOUT="30"
+
+[ ! -r ${conf} ] && err 1 "k8s-join: no such config: ${conf}"
+. ${conf}
+
+bexec jname=${jname} sudo ${join_token}
+_ret=$?
+if [ ${_ret} -ne 0 ]; then
+	${ECHO} "${W1_COLOR}ERROR ${OUTPUT}${N0_COLOR}"
+	exit ${_ret}
+fi
+
+exit 0

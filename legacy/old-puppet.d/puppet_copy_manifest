@@ -1,0 +1,26 @@
+#!/usr/local/bin/cbsd
+#v11.0.14
+MYARG="host_hostname module"
+MYDESC="Generate puppet manifests"
+ADDHELP="module= specify module name\n\
+mode= apply - puppet apply\n\
+jname= can cbsdpuppet1 for configure current system or just create manifest\n"
+
+. ${subr}
+
+init $*
+
+[ ! -d /usr/local/etc/puppet/environments/production/manifests ] && err 1 "${MAGENTA}No /usr/local/etc/puppet/environments/production/manifests${NORMAL}"
+[ ! -d /usr/local/etc/puppet/hieradata/production ] && err 1 "${MAGENTA}No /usr/local/etc/puppet/hieradata/production${NORMAL}"
+
+jname="cbsdpuppet1"
+
+manifest="${workdir}/jails-system/${jname}/puppet/manifest/${module}.pp"
+hiera="${workdir}/jails-system/${jname}/puppet/hieradata/${module}.yaml"
+
+echo "Copy manifest to /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp"
+echo "node \"${host_hostname}\" {" > /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+${CAT_CMD} ${manifest}  >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+echo "}" >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+
+${CP_CMD} ${hiera} /usr/local/etc/puppet/hieradata/production/node/${host_hostname}.yaml

@@ -1,0 +1,117 @@
+php::ensure: installed
+php::manage_repos: true
+php::fpm: true
+php::dev: true
+php::composer: true
+php::pear: true
+php::phpunit: false
+php::fpm::config::log_level: error
+php::composer::auto_update: true
+php::settings:
+  PHP/user_ini.cache_ttl: 900
+  PHP/realpath_cache_size: 1m
+  PHP/realpath_cache_ttl: 900
+  Date/date.timezone: Europe/Moscow
+  opcache/opcache.enable: 1
+  opcache/opcache.enable_cli: 1
+  opcache/opcache.memory_consumption: 128
+
+php::cli::settings:
+  PHP/memory_limit: 512M
+php::fpm::settings:
+  PHP/short_open_tag: 'On'
+php::fpm::pools:
+  www:
+    listen: /tmp/php-fpm.sock
+    user: www
+    group: www
+    listen_owner: www
+    listen_group: www
+    pm: static
+    pm_max_children: 4
+    pm_start_servers:
+    pm_min_spare_servers:
+    pm_max_spare_servers:
+    request_slowlog_timeout: 15s
+    slowlog: /var/log/phpfpm.log.slow
+    chdir: /
+
+php::extensions:
+  json: {}
+  curl: {}
+  json: {}
+  mcrypt: {}
+  gettext: {}
+  session: {}
+  ldap: {}
+  xml: {}
+  openssl: {}
+  zip: {}
+  hash: {}
+  iconv: {}
+
+nginx::config::daemon_user: www
+nginx::config::gzip: 'on'
+nginx::config::gzip_buffers: '16 8k'
+nginx::config::gzip_comp_level: '4'
+nginx::config::gzip_disable: 'msie6'
+nginx::config::gzip_http_version: '1.1'
+nginx::config::gzip_proxied: 'any'
+#nginx::config::gzip_types: 'text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript image/svg+xml'
+nginx::config::gzip_vary: 'on'
+nginx::config::worker_processes: 2
+nginx::config::worker_rlimit_nofile: 10240
+nginx::config::error_log: /var/log/nginx/error.log
+nginx::config::nginx_error_log_severity: error
+nginx::config::pid: /var/run/nginx.pid
+nginx::config::events_use: kqueue
+#nginx::config::sendfile: 'on'
+#nginx::config::server_tokens: 'on'
+#nginx::config::spdy2: 'off'
+#nginx::config::http2: 'off'nginx::config::keepalive_timeout: 120nginx::config::send_timeout: 60
+nginx::config::client_body_timeout: 60
+nginx::config::client_header_timeout: 60
+nginx::config::client_max_body_size: 1m
+nginx::config::server_names_hash_max_size: 1000
+nginx::config::server_names_hash_bucket_size:  512
+nginx::config::types_hash_max_size: 2048
+#$proxy_set_header = [ 'Host $host', 'X-Real-IP $remote_addr', 'X-Forwarded-For $proxy_add_x_forwarded_for', ]
+nginx::nginx_upstreams:
+ 'phpfpm':
+   ensure: present
+   members:
+     - unix:/tmp/php-fpm.sock
+
+nginx::nginx_servers:
+ '#fqdn#':
+    server_name:
+      - #fqdn#
+    www_root: '/usr/local/www/lam'
+
+nginx::nginx_locations:
+ 'static':
+    location: '~ "^/static/[0-9a-fA-F]{8}\/(.*)$"'
+    server: #fqdn#
+    www_root: /usr/local/www/lam
+    internal: true
+ 'php':
+    location: '~ \.php$'
+    server: #fqdn#
+    www_root: /usr/local/www/lam
+    fastcgi: "unix:/tmp/php-fpm.sock"
+
+cix_ldap::server::suffix: #ldap_suffix#
+cix_ldap::server::rootdn: #ldap_bind_id#
+cix_ldap::server::rootpw: #ldap_bind_password#
+cix_ldap::server::log_level: '#openldap_log_level#'
+cix_ldap::server::extra_schemas:
+  - openssh-lpk-openldap
+
+cix_ldap::client::uri: ldap://127.0.0.1
+cix_ldap::client::base: #ldap_suffix#
+cix_ldap::client::ssl: false
+
+cix_lam::ldap_host: 127.0.0.1
+cix_lam::ldap_bind_pass: #ldap_bind_password#
+cix_lam::ldap_bind_id: #ldap_bind_id#
+cix_lam::ldap_suffix: #ldap_suffix#

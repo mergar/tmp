@@ -1,0 +1,7 @@
+  #instance_name#:
+    config:
+      node.name: #instance_name#
+      http.bind_host: #instance_http_bind_host#
+      http.port: #instance_http_port#
+      http.cors.enabled: false
+      xpack.ml.enabled: false

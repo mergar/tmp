@@ -1,0 +1,1 @@
+class { "cix_ldapize": }

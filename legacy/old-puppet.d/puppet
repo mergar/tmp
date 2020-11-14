@@ -1,0 +1,314 @@
+#!/usr/local/bin/cbsd
+#v12.1.13
+MYARG="jname"
+MYOPTARG="mode formfile debug_form module"
+MYDESC="Generate puppet manifests"
+ADDHELP=" module= specify module name\n\
+ mode= apply - puppet apply\n\
+ jname= can CBSDSYS or cbsdpuppet1 for configure current system or just create manifest\n"
+
+. ${subr}
+. ${system}		# is_mounted func
+
+apply_in_jail_remote()
+{
+	mkjhosts file=${data}/etc/hosts ips="${nodeip}" hosts="${certname}" template="Puppet-CBSD-module"
+
+	${CAT_CMD} > ${data}/usr/local/etc/puppet/puppet.conf <<EOF
+[agent]
+server = ${certname}
+pluginsync = true
+show_diff = true
+reports = none
+environment = production
+EOF
+
+	# check for crt
+	if [ -r /var/puppet/ssl/ca/signed/${host_hostname}.pem -a -r ${data}/var/puppet/ssl/certs/${host_hostname}.pem ]; then
+
+		${FILE_CMD} -s /var/puppet/ssl/ca/signed/${host_hostname}.pem
+		${FILE_CMD} -s ${data}/var/puppet/ssl/certs/${host_hostname}.pem
+
+		md5_srv=$( ${MD5_CMD} -qs /var/puppet/ssl/ca/signed/${host_hostname}.pem 2>/dev/null )
+		md5_cl=$( ${MD5_CMD} -qs ${data}/var/puppet/ssl/certs/${host_hostname}.pem 2>/dev/null )
+
+		if [ "${md5_srv}" != "${md5_cl}" ]; then
+			echo "Pem diffrence [ ${md5_srv} / ${md5_cl} ], clean-up for re-sign"
+			/usr/local/bin/puppet cert clean ${host_hostname}
+			jexec jname=${jname} ${FIND_CMD} /var/puppet/ssl -name ${host_hostname}.pem -delete
+		else
+			echo "Pem is equal: ${md5_srv} <=> ${md5_cl}"
+		fi
+	else
+		echo "Prune old certificate"
+		/usr/local/bin/puppet cert clean ${host_hostname}
+		jexec jname=${jname} ${FIND_CMD} /var/puppet/ssl -name ${host_hostname}.pem -delete
+	fi
+
+	jexec jname=${jname} env LANG=en_US.UTF-8 /usr/local/bin/puppet agent -t
+
+	echo "***"
+
+	for _i in ${path}/tmp/cbsdpuppet/modules/public ${path}/tmp/cbsdpuppet ${path}${jail_workdir}/puppet_root; do
+		is_mounted ${_i} && ${UMOUNT_CMD} -f ${_i}
+	done
+
+	if [ ${_was_started} -eq 0 ]; then
+		jstop jname=${jname}
+		jcleanup jname=${jname}
+	else
+		[ -n "${have_restart}" ] && jexec jname=${jname} ${have_restart}
+	fi
+}
+
+apply_in_jail_local()
+{
+	${ECHO} "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}apply...${N0_COLOR}"
+
+	if [ ${debug_form} -eq 1 ]; then
+		case "${jname}" in
+			CBSDSYS)
+				echo "[debug] env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd debug ${jail_workdir}/puppet_root/manifest/init.pp"
+				env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd debug ${jail_workdir}/puppet_root/manifest/init.pp
+				;;
+			*)
+				echo "[debug] jexec jname=${jname} env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd ${jail_workdir}/puppet_root/manifest/init.pp"
+				jexec jname=${jname} env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd debug ${jail_workdir}/puppet_root/manifest/init.pp
+				;;
+		esac
+	else
+		case "${jname}" in
+			CBSDSYS)
+				env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd ${jail_workdir}/puppet_root/manifest/init.pp
+				;;
+			*)
+				jexec jname=${jname} env LANG=en_US.UTF-8 /tmp/cbsdpuppet/puppetcbsd ${jail_workdir}/puppet_root/manifest/init.pp
+				;;
+		esac
+	fi
+	echo "***"
+
+	for _i in ${path}/tmp/cbsdpuppet/modules/public ${path}/usr/local/etc/puppet/modules ${path}/tmp/puppet/etc/puppet ${path}/tmp/cbsdpuppet ${path}${jail_workdir}/puppet_root ${path}/tmp/puppet; do
+		is_mounted ${_i} && ${UMOUNT_CMD} -f ${_i}
+	done
+
+	if [ "${jname}" != "CBSDSYS" ]; then
+		if [ ${_was_started} -eq 0 ]; then
+			jstop jname=${jname}
+			jcleanup jname=${jname}
+		else
+			[ -n "${have_restart}" ] && jexec jname=${jname} ${have_restart}
+		fi
+	fi
+}
+
+# todo
+# reload only when changed
+puppet_setup()
+{
+	local _was_started
+
+	case "${jname}" in
+		CBSDSYS|cbsdpuppet1)
+			# local apply
+			path=
+			data=
+			baserw=1
+			emulator=jail
+			jid=1
+			;;
+		*)
+			[ ${baserw} -eq 1 ] && path="${data}"
+			[ -z "${path}" ] && err 1 "${N1_COLOR}${CBSD_APP}: no path variable: ${N2_COLOR}${jname}${N0_COLOR}"
+
+			if [ ${jid} -eq 0 ]; then
+				case ${emulator} in
+					jail)
+						jstart jname=${jname}
+						_was_started=0
+						;;
+					*)
+						err 1 "${N1_COLOR}${CBSD_APP}: vm is not running: ${N2_COLOR}${jname}${N0_COLOR}"
+						;;
+				esac
+			else
+				_was_started=1
+			fi
+			;;
+	esac
+
+	if [ ! -d ${distmoduledir}/puppet.d/modules/public ]; then
+		${ECHO} "no such ${distmoduledir}/puppet.d/modules/public"
+		err 1 "${N0_COLOR}install and active puppet.d module first${N1_COLOR}"
+	fi
+
+	if [ "${emulator}" = "jail" ]; then
+
+		for i in ${path}/tmp/cbsdpuppet ${path}/tmp/puppet; do
+			[ ! -d ${i} ] && ${MKDIR_CMD} -p ${i}
+		done
+
+		if is_mounted ${path}/tmp/cbsdpuppet; then
+			${UMOUNT_CMD} -f ${path}/tmp/cbsdpuppet
+		fi
+		if is_mounted ${path}/tmp/puppet; then
+			${UMOUNT_CMD} -f ${path}/tmp/puppet
+		fi
+
+		${MOUNT_CMD} -t nullfs -oro /usr/local/cbsd/modules/puppet.d ${path}/tmp/cbsdpuppet
+		${MOUNT_CMD} -t nullfs -oro ${workdir}/jails-data/cbsdpuppet1-data/usr/local ${path}/tmp/puppet
+
+		if [ -z "${module}" ]; then
+			[ ! -d ${path}${jail_workdir}/puppet_root ] && ${MKDIR_CMD} -p ${path}${jail_workdir}/puppet_root
+			${MOUNT_CMD} -t nullfs -oro ${local_puppet_dir} ${path}${jail_workdir}/puppet_root
+		fi
+
+		if [ -d ${path}${jail_workdir}/puppet_root/modules ]; then
+			${ECHO} "${N1_COLOR}info: jail has own puppet module dir: ${N2_COLOR}${jname}${N0_COLOR}"
+			${MOUNT_CMD} -t nullfs -oro ${path}${jail_workdir}/puppet_root/modules ${path}/tmp/cbsdpuppet/modules/public
+		fi
+
+		if [ "${puppet_apply_method}" != "local" ]; then
+			if [ ! -x ${data}/usr/local/bin/puppet ]; then
+				jexec jname=${jname} env ASSUME_ALWAYS_YES=yes pkg install -y sysutils/puppet6
+			fi
+		fi
+	fi
+
+	pkg mode=bootstrap jname=${jname}
+
+	case "${puppet_apply_method}" in
+		local)
+			[ ! -d ${path}${jail_workdir}/puppet_root/manifest ] && ${MKDIR_CMD} -p ${path}${jail_workdir}/puppet_root/manifest
+			[ ! -d ${path}${jail_workdir}/puppet_root/hieradata ] && ${MKDIR_CMD} -p ${path}${jail_workdir}/puppet_root/hieradata
+			jail_manifest="${path}${jail_workdir}/puppet_root/manifest/init.pp"
+			jail_hieradata="${path}${jail_workdir}/puppet_root/hieradata/common.yaml"
+${CAT_CMD} > ${path}${jail_workdir}/hiera.yaml <<EOF
+---
+version: 5
+defaults:
+  # The default value for "datadir" is "data" under the same directory as the hiera.yaml
+  # file (this file)
+  # When specifying a datadir, make sure the directory exists.
+  # See https://docs.puppet.com/puppet/latest/environments.html for further details on environments.
+  # datadir: data
+  # data_hash: yaml_data
+hierarchy:
+  - name: "CBSD YAML hierarchy levels"
+    datadir: ${jail_workdir}/puppet_root/hieradata
+    paths:
+      - "common.yaml"
+EOF
+			;;
+		remote)
+			[ -z "${module}" ] && err 1 "${N1_COLOR}empty module= for remote: not supported yet${N2_COLOR}"
+			jail_manifest="${local_puppet_manifest_dir}/${module}.pp"
+			jail_hieradata="${local_puppet_hieradata_dir}/${module}.yaml"
+			;;
+	esac
+
+	if [ -n "${module}" ]; then
+		${ECHO} "${N1_COLOR}generate manifest and save to: ${N2_COLOR}${local_puppet_manifest_dir}/${module}.pp${N0_COLOR}"
+		generate_manifest > ${jail_manifest}
+		${CP_CMD} ${jail_manifest} ${local_puppet_manifest_dir}/${module}.pp
+		${ECHO} "${N1_COLOR}generate hieradata and save to: ${N2_COLOR}${local_puppet_hieradata_dir}/${module}.yaml${N0_COLOR}"
+		generate_hieradata > ${jail_hieradata}
+		${CP_CMD} ${jail_hieradata} ${local_puppet_hieradata_dir}/${module}.yaml
+	else
+		[ ! -r ${local_puppet_manifest_dir}/init.pp ] && err 1 "${N1_COLOR}no such local manifest: ${N2_COLOR}${local_puppet_manifest_dir}/init.pp${N0_COLOR}"
+	fi
+
+	if [ "${puppet_apply_method}" = "remote" ]; then
+		if [ -d /usr/local/etc/puppet/environments/production/manifests ]; then
+			echo "Copy manifest to /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp"
+			echo "node \"${host_hostname}\" {" > /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+			${CAT_CMD} ${local_puppet_manifest_dir}/${module}.pp  >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+			echo "}" >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+		else
+			echo "no /usr/local/etc/puppet/environments/production/manifests, skip for coping manifest"
+		fi
+
+		if [ -d /usr/local/etc/puppet/hieradata/production ]; then
+			[ ! -d /usr/local/etc/puppet/hieradata/production/node ] && ${MKDIR_CMD} -p /usr/local/etc/puppet/hieradata/production/node
+			echo "Copy hiera to /usr/local/etc/puppet/hieradata/production/node/"
+			${CP_CMD} ${local_puppet_hieradata_dir}/${module}.yaml /usr/local/etc/puppet/hieradata/production/node/${host_hostname}.yaml
+		else
+			echo "no /usr/local/etc/puppet/hieradata/production, skip for coping hiera"
+		fi
+
+		certname=$( /usr/local/bin/puppet config print certname )
+	fi
+
+	case "${emulator}" in
+		jail)
+			apply_in_jail_${puppet_apply_method}
+			;;
+	esac
+}
+
+# MAIN
+debug_form=0
+init $*
+
+readconf puppetd.conf
+
+[ -z "${jail_workdir}" ] && jail_workdir="/tmp/cbsd"
+
+case "${jname}" in
+	CBSDSYS|cbsdpuppet1)
+		;;
+	*)
+		. ${jrcconf}
+		[ $? -eq 1 ] && err 1 "${N1_COLOR}${CBSD_APP}: no such jail: ${N2_COLOR}${jname}${N0_COLOR}"
+		;;
+esac
+
+[ -z "${mode}" ] && mode="show"
+
+if [ -n "${module}" ]; then
+	[ -z "${formfile}" ] && formfile="${jailsysdir}/${jname}/helpers/${module}.sqlite"
+	[ ! -r ${formfile} ] && err 1 "${N0_COLOR}${CBSD_APP}: no such formfile: ${N2_COLOR}${formfile}${N0_COLOR}"
+	my_module_dir="${distmoduledir}/forms.d/${module}"
+	sitepp="${my_module_dir}/site.pp"
+	[ ! -r ${sitepp} ] && err 1 "${N1_COLOR}${CBSD_APP}: no such site.pp: ${N2_COLOR}${sitepp}${N0_COLOR}"
+
+	. ${sitepp}
+
+	mksitefile="${distmoduledir}/forms.d/${module}/site.pp"
+
+	. ${distdir}/imghelper.subr
+
+	readconf helpers.conf
+
+	param=$( cbsdsqlro ${formfile} SELECT param FROM forms ORDER BY CAST\(order_id AS int\) | ${XARGS_CMD} )
+	load_forms
+	load_new
+fi
+
+local_puppet_dir="${jailsysdir}/${jname}/puppet"
+local_puppet_manifest_dir="${local_puppet_dir}/manifest"
+local_puppet_hieradata_dir="${local_puppet_dir}/hieradata"
+
+[ ! -d ${local_puppet_manifest_dir} ] && ${MKDIR_CMD} -p ${local_puppet_manifest_dir}
+[ ! -d ${local_puppet_hieradata_dir} ] && ${MKDIR_CMD} -p ${local_puppet_hieradata_dir}
+
+case "${mode}" in
+	"apply")
+		if [ -n "${module}" ]; then
+			${ECHO} "${N1_COLOR}applying puppet manifest for: ${N2_COLOR}${module}${N0_COLOR}"
+		else
+			${ECHO} "${N1_COLOR}applying puppet manifest from: ${N2_COLOR}${local_puppet_manifest_dir}/init.pp${N0_COLOR}"
+		fi
+		[ -z "${puppet_apply_method}" ] && puppet_apply_method="local"
+		puppet_setup
+		;;
+	*)
+		[ -z "${module}" ] && err 1 "${N1_COLOR}specify module=${N0_COLOR}"
+		echo "Manifest dir: $local_puppet_manifest_dir" >&2
+		echo "Hiera dir: $local_puppet_hieradata_dir" >&2
+
+		generate_manifest > ${local_puppet_manifest_dir}/${module}.pp
+		generate_hieradata > ${local_puppet_hieradata_dir}/${module}.yaml
+		generate_manifest
+		;;
+esac

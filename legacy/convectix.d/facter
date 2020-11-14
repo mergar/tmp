@@ -1,0 +1,62 @@
+#!/usr/local/bin/cbsd
+#v11.0.15
+MYOPTARG=""
+MYDESC="Collect information about CBSD hoster"
+CBSDMODULE="convectix"
+
+. ${subr}
+. ${cbsdinit}
+
+architecture => amd64
+domain => gaijin.lan
+cbsdversion => 2.4.6
+fqdn => gizmo.gaijin.lan
+hostname => gizmo
+interfaces => re0,lo0,tun0
+ipaddress => 10.29.0.134
+ipaddress_lo0 => 127.0.0.1
+ipaddress_re0 => 10.29.0.134
+ipaddress_tun0 => 172.31.192.94
+is_virtual => false
+kernel => FreeBSD
+kernelmajversion => 11
+kernelrelease => 11.0-RELEASE-p1
+kernelversion => 11.0
+macaddress => d0:17:c2:9b:97:9b
+macaddress_re0 => d0:17:c2:9b:97:9b
+memoryfree => 396.75 MB
+memoryfree_mb => 396.75
+memorysize => 15.89 GB
+memorysize_mb => 16274.39
+mtu_lo0 => 16384
+mtu_re0 => 1500
+mtu_tun0 => 1500
+netmask => 255.255.255.0
+netmask_lo0 => 255.0.0.0
+netmask_re0 => 255.255.255.0
+netmask_tun0 => 255.255.252.0
+network_lo0 => 127.0.0.0
+network_re0 => 10.29.0.0
+network_tun0 => 172.31.192.0
+operatingsystem => FreeBSD
+operatingsystemmajrelease => 11
+operatingsystemrelease => 11.0-RELEASE-p1
+os => {"name"=>"FreeBSD", "family"=>"FreeBSD", "release"=>{"major"=>"11", "minor"=>"0", "full"=>"11.0-RELEASE-p1"}}                                                                                                                                                            
+osfamily => FreeBSD                                                                                                                                                                                                                                                            
+processor => Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz                                                                                                                                                                                                                           
+processorcount => 4                                                                                                                                                                                                                                                            
+processors => {"count"=>4}                                                                                                                                                                                                                                                     
+
+elf_version*
+
+swapfree => 7.81 GB                                                                                                                                                                                                                                                            
+swapfree_mb => 7997.47                                                                                                                                                                                                                                                         
+swapsize => 8.00 GB                                                                                                                                                                                                                                                            
+swapsize_mb => 8192.00                                                                                                                                                                                                                                                         
+system_uptime => {"seconds"=>100233, "hours"=>27, "days"=>1, "uptime"=>"1 day"}                                                                                                                                                                                                
+timezone => MSK                                                                                                                                                                                                                                                                
+uptime => 1 day                                                                                                                                                                                                                                                                
+uptime_days => 1                                                                                                                                                                                                                                                               
+uptime_hours => 27                                                                                                                                                                                                                                                             
+uptime_seconds => 100233                                                                                                                                                                                                                                                       
+virtual => physical                                                                                                                                                                                                                                                            

@@ -1,0 +1,25 @@
+# global postup
+postup()
+{
+	local _tmp_yaml="pv.yaml"
+
+	[ -r message.txt ] && cat message.txt
+
+	[ "${PV_ENABLE}" != "1" ] && return 0
+
+	${ECHO} "${N1_COLOR}create PV...${N0_COLOR}" | tee -a ${_message}
+	sed -Ees:%%PV_METADATA_NAME%%:${PV_METADATA_NAME}:g \
+		-Ees:%%PV_SPEC_CAPACITY_STORAGE%%:${PV_SPEC_CAPACITY_STORAGE}:g \
+		-Ees:%%PV_SPEC_VOLUMEMODE%%:${PV_SPEC_VOLUMEMODE}:g \
+		-Ees:%%PV_SPEC_STORAGECLASSNAME%%:${PV_SPEC_STORAGECLASSNAME}:g \
+		-Ees:%%PV_SPEC_NFS_PATH%%:${PV_SPEC_NFS_PATH}:g \
+		-Ees:%%PV_SPEC_SERVER%%:${PV_SPEC_SERVER}:g \
+		-Ees:%%PV_SPEC_ACCESSMODES%%:${PV_SPEC_ACCESSMODES}:g \
+		/usr/local/cbsd/modules/k8s.d/scripts/nfs-pv.yaml > ${_tmp_yaml}
+
+	set -o xtrace
+	kubectl apply -f ${_tmp_yaml}
+	set +o xtrace
+	kubectl get pv | tee -a ${_message}
+	rm -f ${_tmp_yaml} /usr/local/cbsd/modules/k8s.d/kubernetes.tgz /usr/local/cbsd/modules/k8s.d/puppet.tgz message.txt
+}

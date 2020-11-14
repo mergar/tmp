@@ -1,0 +1,39 @@
+#!/usr/local/bin/cbsd
+#v12.1.4
+globalconf="${distdir}/cbsd.conf"
+CBSDMODULE="k8s"
+MYARG="jname"
+MYOPTARG=""
+MYDESC="Kubernetes CBSD module"
+ADDHELP=""
+EXTHELP="modules/k8s.d"
+
+. ${subr}
+. ${cbsdinit}
+. ${system}
+
+. ${jrcconf}
+[ $? -eq 1 ] && err 1 "${N1_COLOR}No such jail: ${N2_COLOR}${jname}${N0_COLOR}"
+
+# gold + md
+#MAX_TIMEOUT="300"
+
+# zvol
+MAX_TIMEOUT="30"
+
+printf "${N1_COLOR}Waiting VM ssh...${N0_COLOR}"
+# wait for VM boot
+for i in $( ${SEQ_CMD} 1 ${MAX_TIMEOUT} ); do
+	x=$( timeout 10 cbsd bexec jname=${jname} date > /dev/null 2>&1 )
+	[ $? -eq 0 ] && break
+	sleep 1
+	${ARP_CMD} -ad > /dev/null 2>&1
+done
+
+if [ $i -eq ${MAX_TIMEOUT} ]; then
+	${ECHO} "${W1_COLOR}k8s-bstart failed: ${N2_COLOR}${jname}${N0_COLOR}"
+	exit 1
+fi
+
+${ECHO} "${N2_COLOR}ready!${N0_COLOR}"
+exit 0

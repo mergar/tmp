@@ -1,0 +1,137 @@
+php::globals:
+  php_version: 7.4
+
+php::ensure: installed
+php::manage_repos: true
+php::package_prefix: php74-
+php::fpm: true
+php::dev: true
+php::composer: true
+php::pear: false
+php::phpunit: false
+php::fpm::config::log_level: error
+php::composer::auto_update: true
+php::settings:
+  PHP/error_log: /var/log/nginx/php.err
+  PHP/user_ini.cache_ttl: 900
+  PHP/realpath_cache_size: 1m
+  PHP/realpath_cache_ttl: 900
+  Date/date.timezone: Europe/Moscow
+  opcache/opcache.enable: 1
+  opcache/opcache.enable_cli: 1
+  opcache/opcache.memory_consumption: 128
+
+php::cli::settings:
+  PHP/memory_limit: 512M
+php::fpm::settings:
+  PHP/short_open_tag: 'On'
+php::fpm::pools:
+  www:
+    listen: /tmp/php-fpm.sock
+    user: www
+    group: www
+    listen_owner: www
+    listen_group: www
+    pm: static
+    pm_max_children: 4
+    pm_start_servers:
+    pm_min_spare_servers:
+    pm_max_spare_servers:
+    request_slowlog_timeout: 15s
+    slowlog: /var/log/phpfpm.log.slow
+    chdir: /
+
+php::extensions:
+  json: {}
+  curl: {}
+  json: {}
+  gettext: {}
+  session: {}
+  openssl: {}
+  zip: {}
+  iconv: {}
+  zlib: {}
+
+nginx::events_use: kqueue
+nginx::confd_purge: true
+nginx::daemon_user: www
+nginx::gzip: 'on'
+nginx::gzip_buffers: '16 8k'
+nginx::gzip_comp_level: '4'
+nginx::gzip_disable: 'msie6'
+nginx::gzip_http_version: '1.1'
+nginx::gzip_proxied: 'any'
+#nginx::gzip_types: 'text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript image/svg+xml'
+nginx::gzip_vary: 'on'
+
+nginx::worker_processes: 2
+nginx::worker_rlimit_nofile: 10240
+nginx::error_log: /var/log/nginx/nginx.err
+nginx::nginx_error_log_severity: error
+nginx::pid: /var/run/nginx.pid
+
+#nginx::sendfile: 'on'
+#nginx::server_tokens: 'on'
+#nginx::spdy2: 'off'
+#nginx::http2: 'off'
+
+nginx::keepalive_timeout: 120
+
+nginx::send_timeout: 60
+nginx::client_body_timeout: 60
+nginx::client_header_timeout: 60
+nginx::client_max_body_size: 1m
+nginx::server_names_hash_max_size: 1000
+nginx::server_names_hash_bucket_size:  512
+nginx::types_hash_max_size: 2048
+
+nginx::nginx_upstreams:
+  'phpfpm':
+    ensure: present
+    members:
+      'phpsock':
+        server: unix:/tmp/php-fpm.sock
+
+nginx::nginx_servers:
+  'rtorrent':
+    server_name:
+      - _
+    ipv6_enable: false
+    ipv6_listen_options: ''
+    ssl_redirect: false
+    ssl: false
+    use_default_location: false
+    www_root: '/usr/home/web/rutorrent'
+    index_files:
+      - index.php
+
+nginx::nginx_locations:
+  'RPC2':
+    location: '/RPC2'
+    server: rtorrent
+    priority: 401
+    location_custom_cfg:
+      include: scgi_params
+      scgi_pass: unix:/tmp/rpc.socket
+  'static':
+    location: '~* \.(jpg|jpeg|gif|png|swf|tiff|swf|flv|zip|rar|bz2|iso|xz|img|css|txt|html|js|xsl|eot|svg|ttf|woff|woff2)$'
+    server: rtorrent
+    priority: 402
+    location_custom_cfg:
+      try_files: '$uri $uri/ =404'
+    index_files:
+     - index.php
+  'php':
+    location: '~ \.php$'
+    priority: 403
+    server: rtorrent
+    www_root: /usr/home/web/rutorrent
+    fastcgi: unix:/tmp/php-fpm.sock
+  'root':
+    location: '/'
+    priority: 410
+    server: rtorrent
+    location_custom_cfg:
+      try_files: '$uri/index.html /index.php$is_args$args'
+    index_files:
+     - index.php

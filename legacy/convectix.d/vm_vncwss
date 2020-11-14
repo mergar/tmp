@@ -1,0 +1,83 @@
+#!/usr/local/bin/cbsd
+#v11.0.10
+MYARG="jname permit"
+MYOPTARG=""
+MYDESC="Launch wss to vnc"
+CBSDMODULE="convectix"
+
+. ${subr}
+. ${cbsdinit}
+
+. ${system}
+. ${distdir}/universe.subr
+. ${distdir}/bhyve.subr
+
+readconf vm_vncwss.conf
+
+[ -z "${daemon_user}" ] && daemon_user="www"
+[ -z "${supervisor_command}" ] && supervisor_command="/usr/local/bin/bash /usr/local/www/clonos/public/novnc/utils/launch.sh"
+[ -z "${supervisor_directory}" ] && supervisor_directory="/usr/local/www/clonos/public/novnc"
+
+[ ! -f ${jailsysdir}/${jname}/vnc_port ] && err 1 "${N1_COLOR}No vnc_port file${N0_COLOR}"
+
+port=$( ${CAT_CMD} ${jailsysdir}/${jname}/vnc_port |awk '{printf $1}' )
+
+[ -z "${nodeip}" ] && nodeip="127.0.0.1"
+
+${CAT_CMD} > /usr/local/etc/supervisor.d/program_vnc2wss.conf <<EOF
+[program:vnc2wss]
+environment=PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+command=${supervisor_command} --listen 6081 --vnc 127.0.0.1:${port}
+directory=${supervisor_directory}
+stdout_logfile=/var/log/supervisor/vnc2wss.log
+stderr_logfile=/var/log/supervisor/vnc2wss.err
+numprocs=1
+numprocs_start=1
+autostart=true
+autorestart=true
+user=${daemon_user}
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=1
+stderr_logfile_maxbytes=1MB
+stderr_logfile_backups=1
+EOF
+
+#/usr/local/bin/supervisorctl reread
+#/usr/local/bin/supervisorctl restart vnc2wss
+
+listen_v6=
+[ "${node_ip6_active}" = "1" ] && listen_v6="listen [::]:6080;"
+
+cat > /usr/local/etc/nginx/streams-enabled/vnc.conf <<EOF
+upstream cbsd_vnc {
+	server 127.0.0.1:6081;
+}
+
+server {
+	listen *:6080;
+	${listen_v6}
+
+	allow 127.0.0.1;	#always trust localhost
+	allow ${permit};	# remote_addr
+	allow ${nodeip};	# nodeip
+	deny all;
+
+	proxy_pass cbsd_vnc;
+}
+EOF
+
+/usr/sbin/service nginx reload
+/usr/local/bin/supervisorctl stop vnc2wss
+/usr/local/bin/supervisorctl reread vnc2wss
+/usr/local/bin/supervisorctl update vnc2wss
+
+/bin/ps -axfw -w -o pid,ucomm,command -ww | ${GREP_CMD} "novnc 6081" | while read _pid _ucomm _cmd; do
+	case "${_ucomm}" in
+		python*)
+			kill -9 ${_pid}
+			;;
+	esac
+done
+
+/usr/local/bin/supervisorctl start vnc2wss
+sleep 3

@@ -1,0 +1,219 @@
+#!/usr/local/bin/cbsd
+#v11.0.14
+MYARG="module jname"
+MYOPTARG="mode formfile"
+MYDESC="Generate puppet manifests"
+ADDHELP="module= specify module name\n\
+mode= apply - puppet apply\n\
+jname= can cbsdpuppet1 for configure current system or just create manifest\n"
+
+. ${subr}
+. ${system}
+. ${tools}
+. ${strings}
+
+init $*
+
+. ${jrcconf}
+[ $? -eq 1 ] && err 1 "${MAGENTA}No such jail: ${GREEN}${jname}${NORMAL}"
+
+[ -z "${mode}" ] && mode="show"
+
+[ -z "${formfile}" ] && formfile="${jailsysdir}/${jname}/helpers/${module}.sqlite"
+[ ! -r ${formfile} ] && err 1 "${MAGENTA}No such formfile: ${GREEN}${formfile}${NORMAL}"
+
+my_module_dir="${moduledir}/forms.d/${module}"
+sitepp="${my_module_dir}/site.pp"
+
+[ ! -r ${sitepp} ] && err 1 "${MAGENTA}No such sitepp: ${GREEN}${sitepp}${NORMAL}"
+
+. ${sitepp}
+
+mksitefile="${moduledir}/forms.d/${module}/site.pp"
+
+. ${distdir}/imghelper.subr
+
+readconf helpers.conf
+
+param=$( cbsdsql ${formfile} SELECT param FROM forms ORDER BY CAST\(order_id AS int\) | /usr/bin/xargs )
+load_forms
+load_new
+
+
+apply_in_jail()
+{
+	mkjhosts file=${data}/etc/hosts ips="${nodeip}" hosts="${certname}" template="Puppet-CBSD-module"
+
+	/bin/cat > ${data}/usr/local/etc/puppet/puppet.conf <<EOF
+[agent]
+server = ${certname}
+pluginsync = true
+show_diff = true
+reports = none
+environment = production
+EOF
+
+	# check for crt
+	if [ -r /var/puppet/ssl/ca/signed/${host_hostname}.pem -a -r ${data}/var/puppet/ssl/certs/${host_hostname}.pem ]; then
+
+		file -s /var/puppet/ssl/ca/signed/${host_hostname}.pem
+		file -s ${data}/var/puppet/ssl/certs/${host_hostname}.pem
+
+		md5_srv=$( /sbin/md5 -qs /var/puppet/ssl/ca/signed/${host_hostname}.pem 2>/dev/null )
+		md5_cl=$( /sbin/md5 -qs ${data}/var/puppet/ssl/certs/${host_hostname}.pem 2>/dev/null )
+
+		if [ "${md5_srv}" != "${md5_cl}" ]; then
+			echo "Pem diffrence [ ${md5_srv} / ${md5_cl} ], clean-up for re-sign"
+			/usr/local/bin/puppet cert clean ${host_hostname}
+			jexec jname=${jname} find /var/puppet/ssl -name ${host_hostname}.pem -delete
+		else
+			echo "Pem is equal: ${md5_srv} <=> ${md5_cl}"
+		fi
+	else
+		echo "Prune old certificate"
+		/usr/local/bin/puppet cert clean ${host_hostname}
+		jexec jname=${jname} find /var/puppet/ssl -name ${host_hostname}.pem -delete
+	fi
+
+	jexec jname=${jname} env LANG=en_US.UTF-8 /usr/local/bin/puppet agent -t
+
+	echo "***"
+
+	/sbin/umount ${path}/usr/local/etc/puppet/modules
+	/sbin/umount ${path}/tmp/puppet/etc/puppet
+	/sbin/umount ${path}/tmp/puppet
+	if [ ${_was_started} -eq 0 ]; then
+		jstop jname=${jname}
+		jcleanup jname=${jname}
+	else
+		[ -n "${have_restart}" ] && jexec jname=$jname ${have_restart}
+	fi
+}
+
+
+# todo
+# reload only when changed
+puppet_apply()
+{
+	local _jpuppet_dir
+	local _jpuppet_puppet_src
+	local _was_started
+
+	_jpuppet_dir="${jaildatadir}/${cbsd_helper_jname}-${jaildatapref}/usr/local"
+	_jpuppet_puppet_src="${_jpuppet_dir}/bin/puppet"
+
+	[ ! -x "${_jpuppet_puppet_src}" ] && err 1 "${MAGENTA}No such puppet in /usr/local/bin/puppet inside ${cbsd_helper_jname}${NORMAL}"
+
+	if [ ${jid} -eq 0 ]; then
+		case ${emulator} in
+			jail)
+				jstart jname=${jname}
+				_was_started=0
+				;;
+			*)
+				err 1 "${EMULATOR}VM is not running: ${GREEN}${jname}${NORMAL}"
+				;;
+		esac
+	else
+		_was_started=1
+	fi
+
+	[ ! -d ${moduledir}/puppet.d/modules/public ] && err 1 "No such ${moduledir}/puppet.d/modules/public"
+
+	if [ "${emulator}" = "jail" ]; then
+		[ $baserw -eq 1 ] && path="${data}"
+		[ -z "${path}" ] && err 1 "No path variable"
+		[ ! -d "${path}/usr/local/etc/puppet/modules" ] && /bin/mkdir -p ${path}/usr/local/etc/puppet/modules
+		[ ! -d ${path}/usr/local/etc/puppet ] && /bin/mkdir -p ${path}/usr/local/etc/puppet
+		[ ! -d ${path}/usr/local/etc/puppet/modules ] && /bin/mkdir ${path}/usr/local/etc/puppet/modules
+		/bin/cp -a ${moduledir}/puppet.d/hiera.yaml ${path}/usr/local/etc/puppet/hiera.yaml
+
+		# first - mount puppet jail source
+		[ ! -d "${path}/tmp/puppet" ] && mkdir -p ${path}/tmp/puppet
+		/sbin/mount -t nullfs -o ro ${_jpuppet_dir} ${path}/tmp/puppet
+		/sbin/mount -t nullfs -o ro ${moduledir}/puppet.d/modules/public ${path}/usr/local/etc/puppet/modules
+		/sbin/mount -t nullfs -o ro ${moduledir}/puppet.d ${path}/tmp/puppet/etc/puppet
+
+		[ $? -ne 0 ] && err 1 "Error mount ${moduledir}/puppet.d/puppet_root/modules to /usr/local/etc/puppet/modules inside jail"
+
+		[ ! -d ${path}/tmp/cbsd ] && /bin/mkdir -p ${path}/tmp/cbsd
+
+		if [ ! -x ${data}/usr/local/bin/puppet ]; then
+			jexec jname=${jname} env ASSUME_ALWAYS_YES=yes pkg install -y sysutils/puppet6
+		fi
+
+	fi
+
+	generate_manifest > ${local_puppet_manifest_dir}/${module}.pp
+
+	[ "${emulator}" = "jail" ] && /bin/cp -a ${local_puppet_manifest_dir}/${module}.pp ${path}/tmp/cbsd/${helpername}.pp
+
+	if [ -d /usr/local/etc/puppet/environments/production/manifests ]; then
+		echo "Copy manifest to /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp"
+		echo "node \"${host_hostname}\" {" > /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+#		/bin/cp ${local_puppet_manifest_dir}/${module}.pp /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+		/bin/cat ${local_puppet_manifest_dir}/${module}.pp  >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+		echo "}" >> /usr/local/etc/puppet/environments/production/manifests/${host_hostname}.pp
+	else
+		echo "no /usr/local/etc/puppet/environments/production/manifests, skip for coping manifest"
+	fi
+
+	generate_hieradata > ${local_puppet_hieradata_dir}/${module}.yaml
+	[ "${emulator}" = "jail" ] && /bin/cp -a ${local_puppet_hieradata_dir}/${module}.yaml ${path}/tmp/cbsd/common.yaml
+
+	if [ -d /usr/local/etc/puppet/hieradata/production ]; then
+#		[ ! -d /usr/local/etc/puppet/hieradata/production/${helpername} ] && /bin/mkdir -p /usr/local/etc/puppet/hieradata/production/${helpername}
+		[ ! -d /usr/local/etc/puppet/hieradata/production/node ] && /bin/mkdir -p /usr/local/etc/puppet/hieradata/production/node
+		echo "Copy hiera to /usr/local/etc/puppet/hieradata/production/node/"
+		/bin/cp ${local_puppet_hieradata_dir}/${module}.yaml /usr/local/etc/puppet/hieradata/production/node/${host_hostname}.yaml
+	else
+		echo "no /usr/local/etc/puppet/hieradata/production, skip for coping hiera"
+	fi
+
+#	${ECHO} "${MAGENTA}Puppet in progress: ${GREEN}jexec for /tmp/cbsd/${helpername}.pp${NORMAL}"
+#	echo "jexec jname=${jname} /tmp/puppet/etc/puppet/puppetcbsd /tmp/cbsd/${helpername}.pp"
+
+#	jexec jname=${jname} /tmp/puppet/etc/puppet/puppetcbsd /tmp/cbsd/${helpername}.pp
+##	jexec jname=${jname} /usr/local/bin/puppet apply --hiera_config /usr/local/etc/puppet/hiera.yaml /tmp/cbsd/${helpername}.pp
+
+	certname=$( /usr/local/bin/puppet config print certname )
+
+	case "${emulator}" in
+		jail)
+			apply_in_jail
+			;;
+	esac
+}
+
+local_puppet_dir="${jailsysdir}/${jname}/puppet"
+local_puppet_manifest_dir="${local_puppet_dir}/manifest"
+local_puppet_hieradata_dir="${local_puppet_dir}/hieradata"
+
+[ ! -d ${local_puppet_manifest_dir} ] && /bin/mkdir -p ${local_puppet_manifest_dir}
+[ ! -d ${local_puppet_hieradata_dir} ] && /bin/mkdir -p ${local_puppet_hieradata_dir}
+
+# We check that we all have to be used helpers
+#case "${helper_module}" in
+#	puppet)
+#		jstatus jname=${cbsd_helper_jname} > /dev/null 2>&1
+#		[ $? -ne 1 ] && err 1 "${MAGENTA}No such ${cbsd_helper_jname} jail. Please obtain cbsdpuppet1 jail from repo or create in by hands${NORMAL}"
+#		;;
+#esac
+
+case "${mode}" in
+	"apply")
+		${ECHO} "${MAGENTA}Applying puppet manifest for: ${GREEN}${module}${NORMAL}"
+
+		readconf puppetd.conf
+		[ -z "${PUPPET_APPLY_METHOD}" ] && PUPPET_APPLY_METHOD="local"
+		puppet_apply
+		;;
+	*)
+#		echo "Manifest dir: $local_puppet_manifest_dir"
+#		echo "Hiera dir: $local_puppet_hieradata_dir"
+
+		generate_manifest > ${local_puppet_manifest_dir}/${module}.pp
+		generate_hieradata > ${local_puppet_hieradata_dir}/${module}.yaml
+		generate_manifest
+		;;
+esac

@@ -1,0 +1,46 @@
+. ${distmoduledir}/k8s.d/share/k8s.conf
+
+# Default SQL scheme for DB local::k8s
+MYTABLE="k8s"
+
+# MYCOL describe in k8s.conf
+id="INTEGER PRIMARY KEY AUTOINCREMENT"
+init_node="TEXT DEFAULT 0"
+k8s_name="TEXT UNIQUE"
+vpc="TEXT DEFAULT 0"
+created="TIMESTAMP DATE DEFAULT (datetime('now','localtime'))"
+
+cluster="TEXT DEFAULT \"k8s-bhyve.io\""
+master_hostname="TEXT DEFAULT \"master.k8s-bhyve.io\""
+k8s_ver="TEXT DEFAULT \"v1.19.3\""
+etcd_ver="TEXT DEFAULT \"v3.4.13\""
+flannel_ver="TEXT DEFAULT \"v0.12.0\""
+init_masters_ips="TEXT DEFAULT \"10.0.0.2\""
+init_nodes_ips="TEXT DEFAULT \"10.0.0.50\""
+vip="TEXT DEFAULT \"10.0.0.100\""
+dns_ip="TEXT DEFAULT \"172.18.0.2\""
+coredns_enable="INTEGER DEFAULT 1"
+ingress_host="TEXT DEFAULT \"master.k8s-bhyve.io\""
+kubelet_master="INTEGER DEFAULT 0"
+
+pv_enable="INTEGER DEFAULT 0"
+pv_nfs_manage_hoster="INTEGER DEFAULT 1"
+pv_metadata_name="TEXT DEFAULT \"nfs-pv\""
+pv_spec_capacity_storage="TEXT DEFAULT \"10Gi\""
+pv_spec_volumemode="TEXT DEFAULT \"Filesystem\""
+pv_spec_accessmodes="TEXT DEFAULT \"ReadWriteMany\""
+pv_spec_storageclassname="TEXT DEFAULT \"nfs\""
+pv_spec_mountoptions="TEXT DEFAULT \"hard nfsvers=4.1\""
+pv_spec_nfs_path="TEXT DEFAULT \"/nfs\""
+pv_spec_server="TEXT DEFAULT \"10.0.0.1\""
+
+master_vm_ram="TEXT DEFAULT \"2g\""
+master_vm_cpus="INTEGER DEFAULT 1"
+master_imgsize="TEXT DEFAULT \"20g\""
+
+worker_vm_ram="TEXT DEFAULT \"2g\""
+worker_vm_cpus="INTEGER DEFAULT 1"
+worker_imgsize="TEXT DEFAULT \"20g\""
+
+CONSTRAINT=
+INITDB=

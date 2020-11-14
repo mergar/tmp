@@ -1,0 +1,24 @@
+#!/usr/local/bin/cbsd
+#v10.0.0
+CBSDMODULE="webdev"
+MYARG="user pw"
+MYOPTARG=""
+MYDESC="Change password for system user"
+
+CBSD_PWFILE="/tmp/cbsdpw"
+
+. ${subr}
+. ${cbsdinit}
+
+. ${inventory}
+
+#defines
+_MYDIR=$(dirname `realpath $0`)
+
+### MAIN Route ###
+id ${user} >/dev/null 2>&1
+[ $? -ne 0 ] && err 1 "No such user ${user}"
+
+echo "${pw}" |pw mod user ${user} -h 0 -
+[ "${user}" = "cbsd" ] && echo "${pw}" > ${CBSD_PWFILE}
+exit 0

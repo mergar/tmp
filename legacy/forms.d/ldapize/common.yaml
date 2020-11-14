@@ -1,0 +1,6 @@
+cix_ldapize::ldap_host: #ldap_host#
+cix_ldapize::ldap_suffix: #ldap_suffix#
+cix_ldapize::ldap_ou: #ldap_ou#
+cix_ldapize::ldap_bind_password: #ldap_bind_password#
+cix_ldapize::ldap_bind_id: #ldap_bind_id#
+

@@ -1,0 +1,86 @@
+#!/usr/local/bin/cbsd
+#v10.1.6
+MYARG=""
+MYOPTARG="jname verbose"
+MYDESC="Update WEBDEV jail size"
+CBSDMODULE="webdev"
+
+. ${subr}
+
+verbose=0
+
+. ${cbsdinit}
+
+. ${system}
+
+WEBDEV_SQLITE="/var/db/webdev/webdev.sqlite"
+
+update_jsize()
+{
+	local size jname jd jid
+
+	jname="${1}"
+
+	[ -z "${jname}" ] && return 1
+
+	. ${jrcconf}
+	if [ $? -eq 1 ]; then
+		[ ${verbose} -eq 1 ] && echo "No such jail: ${jname}"
+		return 1
+	fi
+
+	id=$( echo ${jname} |${TR_CMD} -d "jail" )
+
+	if [ -z "${id}" ]; then
+		[ ${verbose} -eq 1 ] && echo "Can't determine id from jname $jname"
+		return 1
+	fi
+
+	jid="$( cbsdsqlro ${WEBDEV_SQLITE} SELECT id FROM jails WHERE id=\"${id}\" )"
+
+	if [ -z "${jid}" ]; then
+		[ ${verbose} -eq 1 ] && echo "Records in $WEBDEV_SQLITE for ID $id not found"
+		return 1
+	fi
+
+	case $zfsfeat in
+		1)
+			. $zfstool
+			zfsmnt ${data}
+			[ $? -eq 2 ] && /sbin/zfs mount "${ZPOOL}"
+			;;
+		*)
+			[ ${verbose} -eq 1 ] && echo "Not ZFS system"
+			return 1
+		;;
+	esac
+
+	if [ -z "${ZPOOL}" ]; then
+		[ ${verbose} -eq 1 ] && echo "No such zfs pool for jname"
+		return 1
+	fi
+
+	size=$( /sbin/zfs get -Hp -o value used ${ZPOOL} )
+
+	if is_number ${size}; then
+		[ ${verbose} -eq 1 ] && echo "Not number: ${size}"
+		return 1
+	fi
+
+	[ ${verbose} -eq 1 ] && echo $size
+
+	cbsdsqlrw ${WEBDEV_SQLITE} UPDATE jails SET size=\"${size}\" WHERE id=\"${id}\"
+
+	return 0
+}
+
+[ ! -r "${WEBDEV_SQLITE}" ] && err 1 "No such ${WEBDEV_SQLITE}"
+
+if [ -n "${jname}" ]; then
+	update_jsize $jname
+	exit $?
+fi
+
+cbsdsqlro local SELECT jname FROM jails WHERE emulator=\"jail\" | while read jname; do
+	update_jsize ${jname}
+done

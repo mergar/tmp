@@ -1,0 +1,17 @@
+#!/usr/local/bin/cbsd
+#v10.0.2
+CBSDMODULE="bsdconf"
+MYARG="set"
+MYOPTARG="jname"
+MYDESC="Install timezone helper"
+
+. ${subr}
+. ${cbsdinit}
+
+#defines
+_MYDIR=$(dirname `realpath $0`)
+
+### MAIN Route ###
+tzsetup ${set} > /dev/null 2>&1
+[ $? -eq 1 ] && err 1 "No such zone $set"
+tzsetup -r

@@ -1,0 +1,24 @@
+postup_%%JNAME%%()
+{
+	local _message="message.txt"
+	local _server=
+
+	truncate -s0 ${_message}
+
+	bscp %%JNAME%%:config config
+	if [ ! -r config ]; then
+		echo "error: bscp %%JNAME%%:config config"
+		exit 1
+	fi
+	mv config /root/.kube/config
+	chown root:wheel /root/.kube/config
+	_server=$( grep server: /root/.kube/config | awk '{printf $2}' )
+
+	echo " --- master postup message ---" | tee -a ${_message}
+	${ECHO} "${N1_COLOR}KUBERNETES API AVAILABLE: ${N2_COLOR}${_server}${N0_COLOR}" | tee -a ${_message}
+	${ECHO} "${N1_COLOR}KUBECONFIG EXPORTED IN: ${N2_COLOR}/root/.kube/config${N0_COLOR}" | tee -a ${_message}
+	${ECHO} "${N1_COLOR}Info: ${N0_COLOR}" | tee -a ${_message}
+	${ECHO} "${N1_COLOR}   kubectl get nodes${N0_COLOR}" | tee -a ${_message}
+	${ECHO} "${N1_COLOR}   kubectl cluster-info${N0_COLOR}" | tee -a ${_message}
+	echo " --- master postup message ---" | tee -a ${_message}
+}

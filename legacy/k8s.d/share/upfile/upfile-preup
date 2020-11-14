@@ -1,0 +1,23 @@
+# global preup function
+preup()
+{
+	cd /usr/local/cbsd/modules/k8s.d/
+	rm -f kubernetes.tgz puppet.tgz
+	tar cfz kubernetes.tgz kubernetes
+	tar cfz puppet.tgz puppet
+	cd ${myworkdir}
+	local _clean_ip
+
+	# configure PV
+	[ "${PV_ENABLE}" != "1" ] && return 0
+
+	${ECHO} "${N1_COLOR}  * re-configure PV${N0_COLOR}"
+	/usr/local/cbsd/modules/k8s.d/scripts/nfs-enable.sh -h ${PV_SPEC_SERVER}
+	if [ -n "${INIT_NODES_IPS}" ]; then
+		/usr/local/cbsd/modules/k8s.d/scripts/exports-modify.sh -p nfs -h "${INIT_NODES_IPS}"
+	fi
+
+	# dhcpd cleanip list
+	_clean_ip="${INIT_NODES_IPS} ${INIT_MASTERS_IPS} ${VIP}"
+	dhcpd cleanup="${_clean_ip}"
+}

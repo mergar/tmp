@@ -1,0 +1,15 @@
+java::distribution: jre
+java::package: openjdk11-jre
+
+profiles::db::elasticsearch::globals:
+  manage_repo: false
+  package_name: elasticsearch7
+  service_provider: freebsd
+  restart_on_change: true
+  config:
+    cluster.name: boo
+  elasticsearch_group: elasticsearch
+  elasticsearch_user: elasticsearch
+  homedir: /usr/local/etc/elasticsearch
+  package_dir: /tmp
+

@@ -1,0 +1,358 @@
+bootstrap_k8s()
+{
+	local _all_kubes
+	local master_ip master_jname node_jname ips
+	${TRUNCATE_CMD} -s0 ${MYCONF}
+
+	local master_ip ips master_jname node_jname k8s_init
+
+	${TRUNCATE_CMD} -s0 ${K8_HOSTS_FILE}
+
+	# gold test
+	#_all_kubes=1
+
+	_all_kubes=$(( masters_num + nodes_num ))
+
+	_multiple_consumer_name="k8s"
+	for i in $( ${JOT_CMD} ${_all_kubes} ); do
+		jname=$( freejname default_jailname=kube )
+		fqdn="${jname}.my.domain"
+		bremove ${jname} > /dev/null 2>&1
+		ip4_addr=$( dhcpd )
+
+		${ECHO} "${N1_COLOR}* Obtain VM ${i}/${_all_kubes}: ${N2_COLOR}${jname}, ${ip4_addr}${N0_COLOR}"
+
+		# gold test
+		#imgsize="5g"
+		#imgtype="md"
+		imgtype="zvol"
+		imgsize="30g"
+
+		2>&1 bcreate jname=${jname} \
+		imgsize=${imgsize} imgtype=${imgtype} vm_cpus=2 vm_ram=8g vm_os_type=linux \
+		vm_os_profile=${vm_os_profile} ci_jname=${jname} ci_fqdn=${fqdn} \
+		ci_ip4_addr=${ip4_addr} ci_gw4=${ip4_gw} ci_interface_mtu=${ci_interface_mtu} runasap=0 > /dev/null
+
+		/usr/sbin/daemon -f /usr/local/bin/cbsd bstart jname=${jname}
+
+		echo "${ip4_addr} ${fqdn} ${jname}		# inited by k8s bootstrap" >> ${K8_HOSTS_FILE}
+		if [ -z "${master_ip}" ]; then
+			master_ip="${ip4_addr}"
+			master_jname="${jname}"
+		else
+			if [ -z "${ips}" ]; then
+				node_jname="${jname}"
+				ips="${ip4_addr}"
+			else
+				node_jname="${node_jname} ${jname}"
+				ips="${ips} ${ip4_addr}"
+			fi
+		fi
+	done
+
+	task_id=
+	task_owner="k8sstart"
+	for jname in ${master_jname} ${node_jname}; do
+		task_id_cur=$( task mode=new logfile=${tmpdir}/${task_owner}.${jname}.log.$$ client_id=${jname} autoflush=0 owner=${task_owner} /usr/bin/env NOCOLOR=1 cbsd k8s-bstart jname=${jname} 2>/dev/null )
+		if ! is_number "${task_id_cur}"; then
+			task_id="${task_id} ${task_id_cur}"
+		fi
+		sleep 0.4
+	done
+
+	${TOUCH_CMD} ${dbdir}/cbsdtaskd.sqlite
+
+	st_time=$( ${DATE_CMD} +%s )
+	printf "${N1_COLOR}waiting for all hosts to be available...${N0_COLOR}"
+	multiple_task_id_all=$( echo ${task_id} | ${TR_CMD} " " "," )
+	multiple_processing_spawn -o ${task_owner} -n "${_multiple_consumer_name}" -s
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		err ${_ret} "${W1_COLOR}failed${N0_COLOR}"
+	fi
+	end_time=$( ${DATE_CMD} +%s )
+	diff_time=$(( end_time - st_time ))
+	diff_time=$( displaytime ${diff_time} )
+	${ECHO} "${N1_COLOR}done: ${N2_COLOR}${_all_kubes}${N1_COLOR} booted and online ${N2_COLOR}in ${diff_time}${N0_COLOR}"
+
+	for jname in ${master_jname} ${node_jname}; do
+		bscp /tmp/k8s_hosts ${jname}:hosts > ${OUTPUT} 2>&1
+		_ret=$?
+		if [ ${_ret} -ne 0 ]; then
+			${ECHO} "${W1_COLOR}ERROR${N0_COLOR}"
+			${CAT_CMD} ${OUTPUT}
+			exit ${_ret}
+		fi
+
+		bscp ${K8_GUEST_EXEC} ${jname}:k8s-init.sh > ${OUTPUT} 2>&1
+		_ret=$?
+		if [ ${_ret} -ne 0 ]; then
+			${ECHO} "${W1_COLOR}ERROR${N0_COLOR}"
+			${CAT_CMD} ${OUTPUT}
+			exit ${_ret}
+		fi
+	done
+
+	${TRUNCATE_CMD} -s0 ${MYCONF}
+	${ECHO} "${N1_COLOR}master: ${N2_COLOR}${master_ip}${N0_COLOR}"
+	${ECHO} "${N1_COLOR}nodes: ${N2_COLOR}${ips}${N0_COLOR}"
+	${SYSRC_CMD} -qf ${MYCONF} master_ip="${master_ip}" > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} ips="${ips}" > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} master_jname="${master_jname}" > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} node_jname="${node_jname}" > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} k8s_init="1" > /dev/null 2>&1
+	return 0
+}
+
+# $1 - master or node
+setup_k8s()
+{
+	local _targets="${1}"
+	local _nodes=0
+
+	[ -r ${MYCONF} ] && . ${MYCONF}
+
+	_multiple_consumer_name="k8s"
+	task_id=
+	task_owner="k8ssetup"
+
+	# in parralel
+	for i in ${_targets}; do
+		case "${i}" in
+			master)
+				task_id_cur=$( task mode=new logfile=${tmpdir}/${task_owner}.${master_jname}.log.$$ client_id=${master_jname} autoflush=0 owner=${task_owner} /usr/bin/env NOCOLOR=1 cbsd bexec jname=${master_jname} sudo /home/ubuntu/k8s-init.sh ${i} /home/ubuntu/k8s_hosts )
+				if ! is_number "${task_id_cur}"; then
+					task_id="${task_id} ${task_id_cur}"
+				fi
+				_nodes=$(( _nodes + 1 ))
+				sleep 0.4
+				;;
+			node)
+				for jname in ${node_jname}; do
+					task_id_cur=$( task mode=new logfile=${tmpdir}/${task_owner}.${jname}.log.$$ client_id=${jname} autoflush=0 owner=${task_owner} /usr/bin/env NOCOLOR=1 cbsd bexec jname=${jname} sudo /home/ubuntu/k8s-init.sh ${i} /home/ubuntu/k8s_hosts )
+					if ! is_number "${task_id_cur}"; then
+						task_id="${task_id} ${task_id_cur}"
+					fi
+					sleep 0.4
+					_nodes=$(( _nodes + 1 ))
+				done
+				;;
+			*)
+				${ECHO} "${W1_COLOR}setup_k8s error: ${N1_COLOR}unknown target: ${i}. valid: 'master' or 'node'"
+				continue
+				;;
+		esac
+	done
+
+	${TOUCH_CMD} ${dbdir}/cbsdtaskd.sqlite
+
+	st_time=$( ${DATE_CMD} +%s )
+	printf "${N1_COLOR}waiting for all hosts to be configured...${N0_COLOR}"
+	multiple_task_id_all=$( echo ${task_id} | ${TR_CMD} " " "," )
+	multiple_processing_spawn -o ${task_owner} -n "${_multiple_consumer_name}" -s
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		err ${_ret} "${W1_COLOR}failed${N0_COLOR}"
+	fi
+	end_time=$( ${DATE_CMD} +%s )
+	diff_time=$(( end_time - st_time ))
+	diff_time=$( displaytime ${diff_time} )
+	${ECHO} "${N1_COLOR}done: ${N2_COLOR}${_nodes}${N1_COLOR} nodes configured ${N2_COLOR}in ${diff_time}${N0_COLOR}"
+
+	for i in ${_targets}; do
+		${SYSRC_CMD} -qf ${MYCONF} setup_k8s_${i}=1 > /dev/null 2>&1
+	done
+}
+
+get_master_token()
+{
+	local join_token
+
+	[ -r ${MYCONF} ] && . ${MYCONF}
+	if [ "${k8s_init}" = "0" ]; then
+		echo "Not initialized"
+		exit 1
+	fi
+	if [ "${setup_k8s_master}" != "1" ]; then
+		echo "Master node not initialized, -s master"
+		exit 1
+	fi
+
+	# get k8s token
+	_res=$( bexec jname=${master_jname} sudo install -o ubuntu -g ubuntu -p -m 0400 /home/kubeadmin/.kube/config /home/ubuntu/config 2>&1 )
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		echo "get master token error:"
+		echo "${_res}"
+		exit ${_ret}
+	fi
+
+	# get k8s join
+	_res=$( bexec jname=${master_jname} sudo install -o ubuntu -g ubuntu -p -m 0400 /var/lib/k8s/join_token.txt /home/ubuntu/join_token.txt 2>&1 )
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		echo "get master token error:"
+		echo "${_res}"
+		exit ${_ret}
+	fi
+	[ ! -d /root/.kube ] && ${MKDIR_CMD} /root/.kube
+	[ -f /root/.kube/config ] && ${RM_CMD} -f /root/.kube/config
+	_res=$( bscp kube1:config /root/.kube/config 2>&1 )
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		echo "get master token error:"
+		echo "${_res}"
+		exit ${_ret}
+	fi
+
+	_res=$( bscp kube1:join_token.txt /tmp/join_token.txt 2>&1 )
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		echo "get master token error:"
+		echo "${_res}"
+		exit ${_ret}
+	fi
+
+	join_token=$( ${GREP_CMD} . /tmp/join_token.txt 2>/dev/null )
+
+	${SYSRC_CMD} -qf ${MYCONF} join_token="${join_token}" > /dev/null 2>&1
+
+	${ECHO} "${N1_COLOR}token received${N0_COLOR}"
+	return 0
+}
+
+join()
+{
+	local _nodes=0
+
+	_multiple_consumer_name="k8s"
+	task_id=
+	task_owner="k8sjoin"
+
+	[ -r ${MYCONF} ] && . ${MYCONF}
+	if [ "${k8s_init}" = "0" ]; then
+		echo "Not initialized"
+		exit 1
+	fi
+	if [ "${setup_k8s_master}" != "1" ]; then
+		echo "Master node not initialized, -s master"
+		exit 1
+	fi
+	if [ "${setup_k8s_node}" != "1" ]; then
+		echo "nodes not initialized, -s node"
+		exit 1
+	fi
+	if [ -z "${join_token}" ]; then
+		${ECHO} "${N1_COLOR}no token. please run: ${N2_COLOR}token=1${N0_COLOR}"
+		exit 1
+	fi
+
+	for jname in ${node_jname}; do
+		${ECHO} "${N1_COLOR}joining node: ${N2_COLOR}${jname}${N1_COLOR}...${N0_COLOR}"
+		task_id_cur=$( task mode=new logfile=${tmpdir}/${task_owner}.${jname}.log.$$ client_id=${jname} autoflush=0 owner=${task_owner} /usr/bin/env NOCOLOR=1 cbsd k8s-join jname=${jname} conf=${MYCONF} )
+		if ! is_number "${task_id_cur}"; then
+			task_id="${task_id} ${task_id_cur}"
+		fi
+		_nodes=$(( _nodes + 1 ))
+		sleep 0.4
+	done
+
+	${TOUCH_CMD} ${dbdir}/cbsdtaskd.sqlite
+
+	st_time=$( ${DATE_CMD} +%s )
+	printf "${N1_COLOR}waiting for all nodes to connect...${N0_COLOR}"
+	multiple_task_id_all=$( echo ${task_id} | ${TR_CMD} " " "," )
+	multiple_processing_spawn -o ${task_owner} -n "${_multiple_consumer_name}" -s
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		err ${_ret} "${W1_COLOR}failed${N0_COLOR}"
+	fi
+	end_time=$( ${DATE_CMD} +%s )
+	diff_time=$(( end_time - st_time ))
+	diff_time=$( displaytime ${diff_time} )
+	${ECHO} "${N1_COLOR}done: ${N2_COLOR}${_nodes}${N1_COLOR} nodes joined ${N2_COLOR}in ${diff_time}${N0_COLOR}"
+
+	for jname in ${node_jname}; do
+		kubectl label node ${jname} node-role.kubernetes.io/worker=worker
+	done
+
+	return 0
+}
+
+show_info()
+{
+	[ -r ${MYCONF} ] && . ${MYCONF}
+	[ -z "${master_ip}" ] && k8s_init=0
+	[ -z "${ips}" ] && k8s_init=0
+	[ -z "${master_jname}" ] && k8s_init=0
+
+	if [ "${k8s_init}" = "0" ]; then
+		${ECHO} "${N1_COLOR}not initialized yet${N0_COLOR}"
+		exit 0
+	fi
+
+	${ECHO} "${N1_COLOR}master IP: ${N2_COLOR}${master_ip}${N0_COLOR}"
+	${ECHO} "${N1_COLOR}nodes IP: ${N2_COLOR}${ips}${N0_COLOR}"
+	${ECHO} "${N1_COLOR}master jail: ${N2_COLOR}${master_jname}${N0_COLOR}"
+	${ECHO} "${N1_COLOR}nodes jname: ${N2_COLOR}${node_jname}${N0_COLOR}"
+
+	[ -z "${setup_k8s_master}" ] && setup_k8s_master=0
+	[ -z "${setup_k8s_node}" ] && setup_k8s_node=0
+	${ECHO} "${N1_COLOR}setup k8s for master: ${N2_COLOR}${setup_k8s_master}${N0_COLOR}"
+	${ECHO} "${N1_COLOR}setup k8s for nodes: ${N2_COLOR}${setup_k8s_node}${N0_COLOR}"
+	if [ -n "${join_token}" ]; then
+		${ECHO} "${N1_COLOR}join token: ${N2_COLOR}yes${N0_COLOR}"
+	else
+		${ECHO} "${N1_COLOR}join token: no${N0_COLOR}"
+	fi
+	for i in ${master_jname} ${node_jname}; do
+		printf " ${N1_COLOR}status for ${i}: ${N0_COLOR}"
+		i=$( timeout 5 cbsd bexec jname=${i} date > /dev/null 2>&1 )
+		ret=$?
+		if [ ${ret} -eq 0 ]; then
+			${ECHO} " ${N2_COLOR}online${N0_COLOR}"
+		else
+			${ECHO} " ${N1_COLOR}offline${N0_COLOR}"
+		fi
+	done
+
+	exit 0
+}
+
+destroy()
+{
+	[ -r ${MYCONF} ] && . ${MYCONF}
+	[ "${k8s_init}" = "0" ] && exit 0
+	for i in ${master_jname} ${node_jname}; do
+		bstop ${i} > /dev/null 2>&1
+		bremove ${i}
+	done
+	${RM_CMD} -f ${MYCONF}
+	${RM_CMD} -f ${K8_HOSTS_FILE}
+	exit 0
+}
+
+
+reset()
+{
+	[ -r ${MYCONF} ] && . ${MYCONF}
+	[ "${k8s_init}" = "0" ] && exit 0
+	for i in ${master_jname} ${node_jname}; do
+		${ECHO} "${N1_COLOR}resetting: ${i}${N0_COLOR}"
+		bexec jname=${i} sudo /home/ubuntu/k8s-init.sh reset > ${OUTPUT} 2>&1
+		_ret=$?
+		if [ ${_ret} -ne 0 ]; then
+			${ECHO} "${W1_COLOR}ERROR ${OUTPUT}${N0_COLOR}"
+			${CAT_CMD} ${OUTPUT}
+			exit ${_ret}
+		fi
+	done
+
+	${SYSRC_CMD} -qf ${MYCONF} setup_k8s_master=0 > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} setup_k8s_node=0  > /dev/null 2>&1
+	${SYSRC_CMD} -qf ${MYCONF} join_token="" > /dev/null 2>&1
+
+	${RM_CMD} -f /root/.kube/config
+
+	exit 0
+}

@@ -1,0 +1,6 @@
+  '#hba_rules_type#-#hba_rules_database#-#hba_rules_user#':
+    type: '#hba_rules_type#'
+    database: '#hba_rules_database#'
+    user: '#hba_rules_user#'
+    auth_method: '#hba_rules_auth_method#'
+    order: '#hba_rules_order#'

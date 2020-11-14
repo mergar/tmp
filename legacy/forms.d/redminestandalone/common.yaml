@@ -1,0 +1,48 @@
+nginx::events_use: kqueue
+nginx::confd_purge: true
+nginx::daemon_user: www
+nginx::gzip: 'on'
+nginx::gzip_buffers: '16 8k'
+nginx::gzip_comp_level: '4'
+nginx::gzip_disable: 'msie6'
+nginx::gzip_http_version: '1.1'
+nginx::gzip_proxied: 'any'
+#nginx::gzip_types: 'text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript image/svg+xml'
+nginx::gzip_vary: 'on'
+
+nginx::worker_processes: 2
+nginx::worker_rlimit_nofile: 10240
+nginx::error_log: /var/log/nginx/nginx.err
+nginx::nginx_error_log_severity: error
+nginx::pid: /var/run/nginx.pid
+
+#nginx::sendfile: 'on'
+#nginx::server_tokens: 'on'
+#nginx::spdy2: 'off'
+#nginx::http2: 'off'
+
+nginx::keepalive_timeout: 120
+
+nginx::send_timeout: 60
+nginx::client_body_timeout: 60
+nginx::client_header_timeout: 60
+nginx::client_max_body_size: 1m
+nginx::server_names_hash_max_size: 1000
+nginx::server_names_hash_bucket_size:  512
+nginx::types_hash_max_size: 2048
+
+nginx::nginx_upstreams:
+ 'redmine_back':
+   ensure: present
+   members:
+     - 127.0.0.1:8080 max_fails=100 fail_timeout=10s
+
+nginx::nginx_servers:
+ '#fqdn#':
+   server_name:
+     - #fqdn#
+   ipv6_enable: true
+   ipv6_listen_options: ''
+   ssl_redirect: false
+   ssl: false
+   proxy: 'http://redmine_back'

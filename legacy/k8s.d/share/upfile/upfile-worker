@@ -1,0 +1,22 @@
+bhyve_%%JNAME%%()
+{
+	vm_ram="8g"
+	vm_cpus="2"
+	imgsize="20g"
+	ip4_addr=$( dhcpd ip4pool="${INIT_NODES_IPS}" )
+	fqdn="${jname}.%%CLUSTER%%"
+	ci_jname="${jname}"
+	ci_fqdn="${fqdn}"
+	ci_ip4_addr="${ip4_addr}"
+}
+postcreate_%%JNAME%%()
+{
+	rm -f /tmp/prepare_master-${jname}.log
+	bscp %%KEYFILE_PUB%% ${jname}:authorized_keys
+	bscp %%KEYFILE%% ${jname}:id_ed25519
+	bscp /usr/local/cbsd/modules/k8s.d/kubernetes.tgz ${jname}:kubernetes.tgz
+	bscp /usr/local/cbsd/modules/k8s.d/puppet.tgz ${jname}:puppet.tgz
+	bscp /tmp/bootstrap.config ${jname}:bootstrap.config
+	bexec jname=${jname} tar xfz kubernetes.tgz
+	bexec jname=${jname} sudo /home/ubuntu/kubernetes/prepare_master.sh worker | tee -a /tmp/prepare_master-${jname}.log
+}
