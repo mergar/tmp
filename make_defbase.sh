@@ -22,8 +22,8 @@ fi
 
 set -e
 . ${distdir}/cbsd.conf
-. ${distdir}/tools.subr
-. ${distdir}/nc.subr
+. ${distdir}/subr/tools.subr
+. ${distdir}/subr/nc.subr
 set +e
 
 export NOCOLOR=1
